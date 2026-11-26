@@ -125,6 +125,13 @@ def run(facts: dict, pattern: dict, comp: dict, *, shorter: bool = False, strict
 
     body = " ".join(s["text"] for s in sents)
     checked = config.last_checked_for(facts.get("citation_url"))
+    # Owner's decision (26 Nov 2026): never print a check date for a fact that was not actually checked on it
+    # (e.g. a scheme page's benchmark when only its expense ratio, minimum SIP and exit load were compared).
+    import verification
+    if facts["status"] == "covered":
+        v = verification.fact_status(facts.get("citation_url"), facts.get("fact_intents"))
+        if v and v["status"] == "unconfirmed":
+            checked = "not confirmed (official source check pending)"
     footer = f"Last checked: {checked}"
     return {
         "reply": {"sentences": sents, "body": body, "footer": footer, "full_text": f"{body}\n\n{footer}",

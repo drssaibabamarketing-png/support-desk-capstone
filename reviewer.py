@@ -40,7 +40,8 @@ def _content(text: str) -> set[str]:
 def split_reply(full_text: str) -> tuple[list[dict], str | None]:
     """Parse a draft into sentences (each with its citation URLs) and the 'last checked' date."""
     m = _DATE.search(full_text)
-    body = full_text[: m.start()].strip() if m else full_text.strip()
+    foot = re.search(r"\n\s*Last checked:", full_text)          # a footer without a date ("not confirmed") is still a footer
+    body = full_text[: m.start()].strip() if m else (full_text[: foot.start()].strip() if foot else full_text.strip())
     urls: list[str] = []
 
     def stash(mo):
@@ -69,7 +70,14 @@ def review(orch: dict, facts: dict, comp_agent: ComplianceAgent | None = None) -
     # 1. length and last-checked
     if len(sents) > config.MAX_SENTENCES:
         fail("SENTENCE_LIMIT", f"{len(sents)} sentences; the limit is {config.MAX_SENTENCES}")
-    if not last:
+    import verification
+    unconfirmed = None
+    if facts["status"] == "covered" and facts.get("citation_url"):
+        v = verification.fact_status(facts["citation_url"], facts.get("fact_intents"))
+        unconfirmed = v if v and v["status"] == "unconfirmed" else None
+    # The only accepted footer without a date is "Last checked: not confirmed ...", and only for a fact that really is
+    # unconfirmed (that reply is then blocked by UNCONFIRMED_SOURCE below). Any other missing date still fails here.
+    if not last and not (unconfirmed and re.search(r"Last checked: not confirmed", full)):
         fail("MISSING_LAST_CHECKED", "reply has no 'Last checked: <date>' line")
 
     # 2. citations: every non-boilerplate sentence needs exactly one allowed link; and it must be Facts' link
@@ -87,6 +95,11 @@ def review(orch: dict, facts: dict, comp_agent: ComplianceAgent | None = None) -
                 fail("WRONG_CITATION", f"sentence {i} cites a different page than the retrieved fact")
         if not covered:
             fail("UNCITED_FACT", f"sentence {i} states something but the corpus did not cover this question")
+
+    # 2a. owner's decision (26 Nov 2026): a fact whose official source has not been checked for it is blocked
+    if unconfirmed:
+        fail("UNCONFIRMED_SOURCE", f"{unconfirmed['reason']}; this answer cannot be approved until a person checks the page "
+             "and records it in data/source_checks.json")
 
     # 2b. time-sensitive facts must have been re-checked recently (stale expense ratios are never served)
     if covered and set(facts.get("intents") or []) & config.TIME_SENSITIVE_INTENTS and facts.get("citation_url"):

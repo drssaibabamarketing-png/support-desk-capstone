@@ -49,6 +49,9 @@ from service import Service, diff                      # noqa: E402
 # dummy values (never real people's data), assembled at run time
 PAN, PHONE, ACCT, AADHAAR, OTP = "ABCDE" + "1234F", "98765" + "43210", "123456789" + "012", "1234 5678 " + "9012", "48" + "2913"
 SENSITIVE = [PAN, PHONE, ACCT, AADHAAR, OTP]
+# Approved source-verification policy (26 Nov 2026): these questions cite facts outside the recorded check scope of their
+# HDFC scheme page (benchmark, lock-in, riskometer), so their drafts must be blocked until the page is checked.
+UNCONFIRMED_QS = {"Q-014", "Q-024", "Q-037", "Q-038"}
 
 R: dict[str, list] = {}
 
@@ -72,8 +75,17 @@ def fresh(tag):
             shutil.move(str(f), str(arch / f"{d}_{f.name}"))
 
 
+def clean_detail(detail) -> str:
+    """Every detail string is redacted before it is stored or written to a report, so even a FAILING check can never
+    copy dummy PII into outputs/evals/*.md or EVALS_REPORT.md (it once wrote a 30-character excerpt with the fake OTP)."""
+    d = pii.redact(str(detail))[0]
+    for s in SENSITIVE:
+        d = d.replace(s, "[DUMMY VALUE REDACTED]")
+    return d
+
+
 def check(section, name, ok, detail=""):
-    R.setdefault(section, []).append((name, bool(ok), detail))
+    R.setdefault(section, []).append((name, bool(ok), clean_detail(detail)))
     return ok
 
 
@@ -98,12 +110,25 @@ def feasibility():
         explicit = (f["status"] == "covered" and f["citation_url"]) or (f["status"] == "not_covered" and f["searched"]) \
             or t["outputs"]["compliance"]["advice_requested"]
         short = len(t["draft"]["reply"]["sentences"]) <= config.MAX_SENTENCES
-        if not (has_draft and explicit and short and not t["flagged"]):
+        # Approved source-verification policy (owner, 26 Nov 2026): the questions whose cited fact is unconfirmed must be
+        # flagged with UNCONFIRMED_SOURCE (and nothing else); every other question must still be not flagged.
+        codes = {x["code"] for x in t["review"]["failures"]}
+        blocked_ok = svc.meta[tid]["q_id"] in UNCONFIRMED_QS and t["flagged"] and t["send_blocked"] and codes == {"UNCONFIRMED_SOURCE"}
+        if not (has_draft and explicit and short and (not t["flagged"] or blocked_ok)) or (svc.meta[tid]["q_id"] in UNCONFIRMED_QS and not blocked_ok):
             bad.append(svc.meta[tid]["q_id"])
     cov = sum(1 for tid in svc.order if svc.desk.tickets[tid]["outputs"]["facts"]["status"] == "covered")
     adv = sum(1 for tid in svc.order if svc.desk.tickets[tid]["outputs"]["compliance"]["advice_requested"])
-    check(S, f"every one of the {n} queued questions produces a draft (cited, refusal, or explicit 'not covered'), 3 sentences or fewer, not flagged",
+    check(S, f"every one of the {n} queued questions produces a draft (cited, refusal, or explicit 'not covered'), 3 sentences or fewer, not flagged "
+             f"(except the {len(UNCONFIRMED_QS)} unconfirmed-source questions, which must be flagged UNCONFIRMED_SOURCE only)",
           not bad, f"{n - len(bad)}/{n} ok; covered {cov}, refused advice/returns {adv}, not covered {n - cov - adv}; failures: {bad or 'none'}")
+    by_q = {svc.meta[t]["q_id"]: t for t in svc.order}
+    blk = {q: svc.decide_ticket(by_q[q], True) for q in sorted(UNCONFIRMED_QS)}
+    check(S, "the 4 unconfirmed-source questions (benchmark, lock-in x2, riskometer) have drafts, show no check date, and approval is refused (403)",
+          all(r.get("status") == 403 and svc.meta[by_q[q]]["status"] == "pending"
+              and svc.desk.tickets[by_q[q]]["draft"]["reply"]["body"]
+              and "Last checked: not confirmed" in svc.desk.tickets[by_q[q]]["draft"]["reply"]["full_text"]
+              and "26 Nov 2026" not in svc.desk.tickets[by_q[q]]["draft"]["reply"]["full_text"] for q, r in blk.items()),
+          str({q: r.get("status") for q, r in blk.items()}))
     nc = [svc.desk.tickets[t]["outputs"]["facts"] for t in svc.order if svc.desk.tickets[t]["outputs"]["facts"]["status"] == "not_covered"]
     check(S, "every 'not covered' result names what was searched", all(f["searched"] for f in nc), f"{len(nc)} not-covered results")
 
@@ -346,10 +371,13 @@ def grounding_compliance(svc_main, run):
             tid = svc.submit_question(m)
             t = svc.desk.tickets[tid]
             blob = json.dumps({k: v for k, v in t.items() if k not in ("timing",)}, default=str) + json.dumps(svc.meta[tid]["label"])
-            if t["pii_removed"] and not pii.detect(t["message"]) and not any(s in blob for s in SENSITIVE) and t["review"]["passed"]:
+            # review must pass, except (approved policy) a blocked answer whose ONLY failure is UNCONFIRMED_SOURCE
+            codes = {x["code"] for x in t["review"]["failures"]}
+            review_ok = t["review"]["passed"] or (codes == {"UNCONFIRMED_SOURCE"} and t["send_blocked"])
+            if t["pii_removed"] and not pii.detect(t["message"]) and not any(s in blob for s in SENSITIVE) and review_ok:
                 removed_ok += 1
             else:
-                leaks.append(m[:30])
+                leaks.append(pii.redact(m)[0][:30])           # never the raw test message (it holds dummy PII)
     check(S, "messages containing a PAN, account number, phone, Aadhaar and OTP (rephrased, repeated): all redacted before storage and absent from agent state",
           removed_ok == n_pii, f"{removed_ok}/{n_pii} redacted; full ticket state scanned for the dummy values; misses {leaks or 'none'}")
 
@@ -400,6 +428,10 @@ def grounding_compliance(svc_main, run):
     shipped = [p for p in ROOT.rglob("*") if p.is_file() and p.suffix in (".csv", ".md", ".json", ".jsonl", ".py", ".html", ".txt", ".eml") and ".git" not in p.parts and p.name != "poisoned_reviews.csv"]
     hit2 = [str(p.relative_to(ROOT)) for p in shipped if any(s in p.read_text(encoding="utf-8", errors="ignore") for s in SENSITIVE)]
     check(S, "the repository itself contains none of the dummy sensitive values (they are built at run time)", not hit2, f"{len(shipped)} files scanned; hits {hit2 or 'none'}")
+    probe = "misses [" + repr("OTP is " + OTP + " and my aadhaar is " + AADHAAR) + ", " + PAN + "]"
+    cleaned = clean_detail(probe)
+    check(S, "eval report details are redacted before writing: a failing check cannot copy dummy PII or test messages into a report",
+          not any(s in cleaned for s in SENSITIVE) and not pii.detect(cleaned) and "REDACTED" in cleaned, cleaned[:60])
     ppath.unlink(missing_ok=True)
 
 

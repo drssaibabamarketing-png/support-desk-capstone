@@ -1,12 +1,13 @@
 # Eval 1: Feasibility
 
-Result: **13/13 checks pass**
+Result: **14/14 checks pass**
 
 | Check | Result | Detail |
 |---|---|---|
-| every one of the 38 queued questions produces a draft (cited, refusal, or explicit 'not covered'), 3 sentences or fewer, not flagged | PASS | 38/38 ok; covered 28, refused advice/returns 4, not covered 6; failures: none |
+| every one of the 38 queued questions produces a draft (cited, refusal, or explicit 'not covered'), 3 sentences or fewer, not flagged (except the 4 unconfirmed-source questions, which must be flagged UNCONFIRMED_SOURCE only) | PASS | 38/38 ok; covered 28, refused advice/returns 4, not covered 6; failures: none |
+| the 4 unconfirmed-source questions (benchmark, lock-in x2, riskometer) have drafts, show no check date, and approval is refused (403) | PASS | {'Q-014': 403, 'Q-024': 403, 'Q-037': 403, 'Q-038': 403} |
 | every 'not covered' result names what was searched | PASS | 10 not-covered results |
-| weekly loop completes with no manual intervention once triggered (separate process, exit code 0) | PASS | exit 0; 3.9s; 366 reviews; signals ['Groww brokerage and charges x8', 'HDFC scheme exit load x5'] |
+| weekly loop completes with no manual intervention once triggered (separate process, exit code 0) | PASS | exit 0; 4.0s; 366 reviews; signals ['Groww brokerage and charges x8', 'HDFC scheme exit load x5'] |
 | the unattended run wrote nothing but its result file (writes stay pending at the gate) | PASS | files: ['weekly_job_result.json'] |
 | every theme carries review ids and a stated window | PASS | 5 themes, window 2026-08-22 to 2026-08-29, ids per theme: [191, 55, 44, 39, 37] |
 | at most 5 themes and 3 top themes | PASS | 5 themes |

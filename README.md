@@ -4,7 +4,7 @@
 
 **One system for support and product: reviews become themes, questions become cited drafts, and the weekly fee explainer becomes the answer support reuses. A human approves every write.**
 
-![Python](https://img.shields.io/badge/python-3.11-0F8B6D) ![Flask](https://img.shields.io/badge/flask-3-0F8B6D) ![Evals](https://img.shields.io/badge/evals-175%2F175-0F8B6D) ![Tests](https://img.shields.io/badge/unit%20tests-30%20pass%20%C2%B7%207%20voice%20skipped-0F8B6D) ![License](https://img.shields.io/badge/license-MIT-5C6963)
+![Python](https://img.shields.io/badge/python-3.11-0F8B6D) ![Flask](https://img.shields.io/badge/flask-3-0F8B6D) ![Evals](https://img.shields.io/badge/evals-177%2F177-0F8B6D) ![Tests](https://img.shields.io/badge/unit%20tests-33%20pass%20%C2%B7%207%20voice%20skipped-0F8B6D) ![License](https://img.shields.io/badge/license-MIT-5C6963)
 
 NextLeap Applied Generative AI Bootcamp · Cohort 7 · Capstone · Product: **Groww** with **HDFC Mutual Fund** schemes
 
@@ -92,7 +92,7 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 | Voice | Consent notice (the browser may send audio to Google or Microsoft), English / Hindi / Kannada and more, listening / processing / success / error states, transcript review before submission, retry and typed fallback, clarification chips, read-aloud. Tested with a **mocked** recogniser in a real browser engine; **not** tested with a live microphone |
 | Facts | DP charges per sell order; five expense ratios and three source pages re-checked on 26 Nov |
 | Reviewer | Also rejects sentences unsupported by the cited fact, including reworded or reordered ones |
-| Evals | 175 checks in ten groups, including a 38-question hand-labelled golden dataset |
+| Evals | 177 checks in ten groups, including a 38-question hand-labelled golden dataset |
 
 ## What changed in the Claude Code audit (26 Nov)
 | Area | Defect found | Now |
@@ -104,8 +104,8 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 | Access | Everyone could read the live queue, audit log and written files, and submit questions; no password meant anyone could approve | Live desk reviewer-only, fail closed; public read-only demo on synthetic sample data |
 | Hardening | Login limit bypassable with `X-Forwarded-For`; no CSP; signing key could enter the Docker image | Real client address (`PROXY_HOPS`), nonce-based CSP, HSTS on HTTPS, `.dockerignore` |
 | Persistence | Refinements and re-drafts not journalled; accepted edits dropped on restart after the stale date | Journalled and replayed; restored stale edits kept but blocked |
-| Sources | Scheme-page facts other than expense ratio, minimum SIP and exit load carried a date they were not checked on | Warnings wherever a source is overdue, unconfirmed or due soon; [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md) lists what needs a person |
-| CI and tooling | `weekly.yml` did not parse; evals crashed on Windows (unclosed SQLite); one eval check could never fail | Fixed, each with a test; the vacuous check is kept and a strict one added |
+| Sources | Scheme-page facts other than expense ratio, minimum SIP and exit load carried a date they were not checked on | Those answers are drafted but blocked from approval (`UNCONFIRMED_SOURCE`) and show "Last checked: not confirmed"; warnings wherever a source is overdue, unconfirmed or due soon; [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md) lists what needs a person |
+| CI and tooling | `weekly.yml` did not parse; evals crashed on Windows (unclosed SQLite); one eval check could never fail; a failing eval could copy fake test PII into its report | Fixed, each with a test; the vacuous check is kept and a strict one added; every eval detail is redacted before writing |
 
 ## MCP and the approval gate
 `mcp_layer.py` defines four tools (served over the real protocol by `mcp_server.py`, see below), each with a name, description and input schema: `append_weekly_record`, `create_weekly_email`, `append_support_record`, `create_email_draft`. All writes go through `call_tool(name, args, gate)`, which refuses unless **that action's own** `ApprovalGate` is approved, then checks required arguments, re-scans the payload for PII, writes, and appends an audit line. Gates exist per action (two weekly, one per ticket); a draft the reviewer flagged cannot be approved (403). Full reference with schemas, sequence diagrams, failure modes and how to swap in real Docs/Gmail MCP servers: **[docs/mcp.md](docs/mcp.md)**.
@@ -127,13 +127,13 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 Rule-by-rule map and threat model: [docs/compliance-model.md](docs/compliance-model.md).
 
 ## Evaluation
-`python -m evals.run_evals` runs ten groups of checks over the assembled system (about 30 s, no network except the local MCP subprocess). Last full run: 175/175 on Python 3.14 / Windows 11; unit tests 30 pass and the 7 voice browser tests were skipped (Playwright not installed). Results are saved in [`outputs/evals/`](outputs/evals/) and shown on the Evals page.
+`python -m evals.run_evals` runs ten groups of checks over the assembled system (about 30 s, no network except the local MCP subprocess). Results are saved in [`outputs/evals/`](outputs/evals/) and shown on the Evals page. **Last full run: 177/177** on Python 3.14 / Windows 11; unit tests 40 run, 33 pass, and the **7 voice browser tests are skipped** because Playwright is not installed (they have not been run in this environment).
 
 | Eval | Result | What it proves |
 |---|---|---|
-| **Feasibility** | 13/13 | All 38 queued questions get a draft or explicit "not covered"; weekly loop completes unattended in a separate process; caps held; both connections work |
+| **Feasibility** | 14/14 | All 38 queued questions get a draft or explicit "not covered"; the 4 whose cited fact is unconfirmed (Q-014, Q-024, Q-037, Q-038) are flagged `UNCONFIRMED_SOURCE` only and approval is refused (403); weekly loop completes unattended in a separate process; caps held; both connections work |
 | **Correctness of edits** | 16/16 | State is diffed before and after: an edit changes only its draft; rejecting leaves the queue untouched; approving one action never triggers another; flagged drafts and pending gates cannot write |
-| **Grounding and compliance** | 26/26 | 15 sampled claims trace to a link or review id; 8 unanswerable questions say so; 32 advice/return attempts and 14 PII messages (rephrased, repeated) refused or redacted; a poisoned reviews file leaves the pulse clean; no log or file holds sensitive values |
+| **Grounding and compliance** | 27/27 | 15 sampled claims trace to a link or review id; 8 unanswerable questions say so; 32 advice/return attempts and 14 PII messages (rephrased, repeated) refused or redacted (the only review failure allowed is `UNCONFIRMED_SOURCE`); a poisoned reviews file leaves the pulse clean; no log, file or eval report holds sensitive or dummy test values |
 
 | **Regressions** (outside review and Claude Code audit, 26 Nov) | 20/20 | Source-verification statuses (unconfirmed scope, overdue after 60 days, no date changed); a strict version of the brokerage-count check; DP charges are per sell order; fabricated and meaning-flipped claims that keep a valid source link are rejected; CSV upload is cleaned and moves the window; poisoned reviews never reach the Pattern Agent index; IFSC and UPI redacted; five expense ratios match the HDFC pages checked 26 Nov; generic "charges" no longer counted as brokerage |
 | **Golden dataset** (hand labels in `data/golden.csv`) | 39/39 | status and cited page for all 38 questions, plus a summary row |
@@ -199,24 +199,24 @@ Dockerfile docker-compose.yml render.yaml Procfile n8n-workflow.json .github/wor
 ## Known limits
 - **The 38 queued questions are written for this demo (no real customer data).** "Asked 8 times" describes that set, not real traffic. The demo clock is pinned to the end of the reviews export (29 Aug 2026) so questions and reviews share one week. After a reviews upload the clock moves to the new data, so the seeded August questions no longer fall in the window.
 - **"Same question" means same topic key** (rule-based), not semantic clustering.
-- **Sources.** Overdue, unconfirmed and due-soon sources carry a visible warning and are listed in [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md); the five HDFC scheme pages are *unconfirmed* for everything except expense ratio, minimum SIP and exit load. With no new manual checks, every source is overdue from 26 Jan 2027 and time-sensitive replies are blocked (`STALE_FACT`). Checked on 26 Nov 2026: the five HDFC scheme pages, `groww.in/pricing` and two Groww Help Centre pages. The HDFC pages show no as-of date for the expense ratio, so it is current only on the check date. Not re-opened: `groww.in/help` (home), SEBI, AMFI and the HDFC service pages. The corpus still lists some older HDFC addresses as supporting references. See [SOURCES.md](SOURCES.md).
+- **Sources.** Answers citing a fact outside a page's recorded check (today: benchmark, riskometer, lock-in, fund manager and objective on the HDFC scheme pages) are **blocked from approval** and say "Last checked: not confirmed" until a person checks the page. Overdue, unconfirmed and due-soon sources carry a visible warning and are listed in [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md). With no new manual checks, every source is overdue from 26 Jan 2027 and time-sensitive replies are blocked (`STALE_FACT`).
 - **Reviews:** 8 weeks only; clusters are unsupervised and noisy, named by a lexicon. The pulse shows the top 3 by volume, so the small, very negative *Customer support & trust* theme (39 reviews, 87% rated 1–2★) is on the Weekly page but not in the pulse's top 3. One quote (R999) is a generic positive review. "366 reviews" means unique substantive texts (1,067 records in the window, 630 distinct, 366 with four or more words).
 - **The weekly loop replays the bundled export** unless a newer CSV is uploaded. The scheduled GitHub Action therefore repeats the same window until a newer file is committed or uploaded.
 - **The reviewer checks support by words and word order, not by meaning.** A sentence that preserves the fact's phrasing but is wrong for another reason is outside what it can see. Human edits get the same check and a harmless rewording may be refused.
 - **Access:** one shared reviewer password; no per-user accounts or per-approver audit. Questions can only be added by a logged-in reviewer (customers do not submit directly).
-- **Persistence works only on a persistent disk** (Docker volume, Render paid disk). On Render's free tier the filesystem is ephemeral, so a redeploy starts fresh.
+- **Persistence is not durable on the hosted demo.** The submission runs on Render's **free plan**, which has no disk: the SQLite journal, approvals, edits, live questions and written files can be **lost on any restart, sleep or redeploy**. Durable persistence is not claimed. It needs a persistent disk (Docker volume or a paid Render disk; see render.yaml). The public demo uses synthetic data only; the live reviewer interface stays login-protected.
 - **MCP:** a real server and a real protocol, but the tool bodies write local files and an unsent `.eml`; no Google Docs or Gmail connector is attached.
 - **The default build is deterministic** (retrieval, rules, templates). The optional Groq path is off unless a key is set and is untested.
 - **Advice detection is regex-based** and can be bypassed by unusual phrasing; the reply would still be a cited fact or "not covered".
-- **Voice:** the automated tests use a mocked recogniser (7 browser tests). No live microphone test has been done by the author; do the manual check in [docs/ui-guide.md](docs/ui-guide.md). Browser speech recognition may send audio to the browser vendor's cloud; this app never receives or stores audio, and shows a consent notice first.
+- **Voice:** the 7 voice browser tests (real browser engine, mocked recogniser) are **skipped**: Playwright is deliberately not installed, so they have not been run in this environment. No live microphone test has been done. Browser speech recognition may send audio to the browser vendor's cloud; this app never receives or stores audio, and shows a consent notice first.
 - **A ticket approval authorises two writes** (the support-log record and the reply draft) because they are one decision about one ticket; the weekly doc append and email draft are separate decisions. Both are shown before the click.
 - **The HTTP MCP transport has no login of its own;** keep it on localhost or behind an authenticating proxy.
-- **A fresh-environment install and the `gunicorn` start command could not be run in the authoring sandbox** (no package index access); versions installed locally satisfy `requirements.txt`. **The Docker image and the n8n workflow were not built or run** in the authoring sandbox.
+- **Dependencies are not pinned** (`requirements.txt` uses minimum versions). Render installs the newest compatible versions under the explicitly configured `PYTHON_VERSION=3.11.9`; the last full run used Python 3.14 locally, so the exact Render package set has not been tested beforehand and builds are not bit-for-bit reproducible. The Docker image and the n8n workflow were not built or run.
 - More in [docs/edge-cases.md](docs/edge-cases.md).
 
 ## Deploy
 1. Push this folder to a **new** GitHub repo (keeps Milestone 3 as submitted).
-2. Render → New → Web Service → select the repo (`render.yaml` sets build and start: `gunicorn app:app --workers 1 --threads 4`).
+2. Render → New → **Blueprint** → select the repo. Only a Blueprint applies `render.yaml` (free plan, `PYTHON_VERSION=3.11.9`, build `pip install -r requirements.txt`, start `gunicorn app:app --workers 1 --threads 4 --timeout 120`, generated `REVIEWER_PASSWORD`, `SECRET_KEY` and `WEEKLY_TOKEN`, `COOKIE_SECURE=1`, `PROXY_HOPS=1`). A plain "Web Service" ignores `render.yaml`. Then set Settings → Health Check Path to `/healthz`.
 3. Read the generated `REVIEWER_PASSWORD` in Render → Environment. Open the URL, check `/healthz`, log in as reviewer, click through Overview → Weekly pulse. Put the URL at the top of this README.
 4. Optional schedule: the `weekly-loop` GitHub Action runs `weekly_job.py` every Monday 09:00 IST; add secrets `APP_URL` and `WEEKLY_TOKEN` (same value as the Render variable) to also trigger the hosted app. `n8n-workflow.json` is an optional alternative.
 

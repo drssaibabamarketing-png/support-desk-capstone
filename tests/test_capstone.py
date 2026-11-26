@@ -386,6 +386,40 @@ class SourceVerification(unittest.TestCase):
         os.environ.pop("REVIEWER_PASSWORD")
         self.assertEqual(hashlib.sha256(self.SC.read_bytes()).hexdigest(), h0)          # reporting never edits dates
 
+    def test_unconfirmed_facts_are_drafted_but_blocked_and_show_no_check_date(self):
+        # owner's decision: benchmark / riskometer / lock-in / fund-manager answers are blocked until their source is checked
+        s = SVC
+        by_q = {s.meta[t]["q_id"]: t for t in s.order}
+        for q in ("Q-014", "Q-024", "Q-037", "Q-038"):
+            t = s.desk.tickets[by_q[q]]
+            self.assertTrue(t["draft"]["reply"]["body"])
+            self.assertIn("Last checked: not confirmed", t["draft"]["reply"]["full_text"])
+            self.assertNotIn("26 Nov 2026", t["draft"]["reply"]["full_text"])
+            self.assertEqual({f["code"] for f in t["review"]["failures"]}, {"UNCONFIRMED_SOURCE"})
+            self.assertEqual(s.decide_ticket(by_q[q], True).get("status"), 403)
+            self.assertEqual(s.meta[by_q[q]]["status"], "pending")
+        t5 = s.desk.tickets[by_q["Q-005"]]                                             # a checked field is unaffected
+        self.assertIn("Last checked: 26 Nov 2026", t5["draft"]["reply"]["full_text"])
+
+    def test_not_confirmed_footer_is_accepted_only_for_an_unconfirmed_fact(self):
+        import copy
+        import reviewer
+        t5 = SVC.desk.tickets[next(t for t in SVC.order if SVC.meta[t]["q_id"] == "Q-005")]   # minimum SIP: verified
+        d = copy.deepcopy(t5["draft"])
+        d["reply"]["full_text"] = d["reply"]["body"] + "\n\nLast checked: not confirmed (official source check pending)"
+        codes = {f["code"] for f in reviewer.review(d, t5["outputs"]["facts"])["failures"]}
+        self.assertIn("MISSING_LAST_CHECKED", codes)                                    # no loophole for verified facts
+
+    def test_eval_reports_hold_no_dummy_test_data(self):
+        # a failing eval once wrote an excerpt with the fake OTP into outputs/evals; the shipped reports must stay clean
+        root = Path(__file__).resolve().parent.parent
+        dummies = ["ABCDE" + "1234F", "98765" + "43210", "12345" + "6789" + "012", "1234 5678 " + "9012", "48" + "2913"]
+        files = sorted((root / "outputs" / "evals").glob("*.md")) + [root / "outputs" / "evals" / "summary.json", root / "EVALS_REPORT.md"]
+        for f in files:
+            txt = f.read_text(encoding="utf-8")
+            self.assertFalse([d for d in dummies if d in txt], f.name)
+            self.assertFalse(pii.detect(txt), f.name)
+
     def test_dp_explainer_cites_the_page_checked_for_the_per_order_claim(self):
         exp = weekly.build_explainer({"fee": "DP / depository charges on selling"})
         b2 = exp["bullets"][1]

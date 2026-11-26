@@ -1,15 +1,15 @@
 {
   "feasibility": {
-    "passed": 13,
-    "total": 13
+    "passed": 14,
+    "total": 14
   },
   "edit_correctness": {
     "passed": 16,
     "total": 16
   },
   "grounding_compliance": {
-    "passed": 26,
-    "total": 26
+    "passed": 27,
+    "total": 27
   },
   "regressions": {
     "passed": 20,

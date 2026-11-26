@@ -1,5 +1,10 @@
 # Changelog
 
+## 26 Nov 2026 (owner decisions before deployment)
+- **Unconfirmed facts blocked:** answers citing a fact outside a page's recorded check scope (benchmark, riskometer, lock-in, fund manager, objective on the HDFC scheme pages) are still drafted, but print "Last checked: not confirmed (official source check pending)" instead of the page's 26 Nov date and fail review with `UNCONFIRMED_SOURCE` only, so approval is refused. A "not confirmed" footer on a verified fact still fails `MISSING_LAST_CHECKED`. The reply parser now treats a dateless footer as a footer, not a sentence.
+- **Evals (approved expectation changes, nothing else loosened):** feasibility now requires the 4 unconfirmed-source questions (Q-014, Q-024, Q-037, Q-038) to be flagged `UNCONFIRMED_SOURCE` only while every other question stays unflagged, plus a new check that their approval is refused; the PII check still requires full redaction and allows only `UNCONFIRMED_SOURCE` as a review failure. Every eval detail is now redacted before it is written (a failing check had copied a fake OTP into a report), with a new regression check. Totals: 177/177; unit tests 40 run, 33 pass, 7 voice skipped.
+- **Disclosures:** voice browser tests skipped (Playwright not installed, by decision); Render free plan, state not durable; dependencies not pinned, `PYTHON_VERSION=3.11.9` explicit. README deploy steps now say Render **Blueprint**.
+
 ## 26 Nov 2026 (Claude Code audit and fixes)
 Work moved from Claude Chat to Claude Code. The folder was put under git (baseline commit 40f8381 = the handed-over state); each step below is its own commit with regression tests that fail on the previous code. No existing test or eval assertion was weakened.
 - **Security, receipts:** single use was not atomic on Windows (rename claim; concurrent renames all "succeeded"), so one approval could authorise several MCP writes. Now an exclusive-create claim; losers get a clean refusal.
