@@ -1,0 +1,3 @@
+{% extends "base.html" %}{% block title %}Written files{% endblock %}
+{% block body %}<main class="wrap page"><h1>Written files</h1><p class="lede">What the approved actions actually wrote. Email drafts are unsent.</p>
+{% for n,txt in files %}<section class="card"><h2>{{ n }}</h2><pre class="doc">{{ txt }}</pre></section>{% endfor %}</main>{% endblock %}

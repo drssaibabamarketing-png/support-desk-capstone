@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}Canonical explainers{% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Canonical fee explainers</h1>
+<p class="lede">When a human approves the weekly doc entry, its fee explainer becomes the canonical answer. The response loop then reuses the matching bullet instead of drafting fresh.</p>
+{% for fee,rec in canon.items() %}<section class="card"><h2>{{ fee }} <span class="pill ok">v{{ rec.version }}</span></h2>
+  <p class="sub">Approved {{ rec.approved_at }} · from run {{ rec.run_id }} · last checked {{ rec.last_checked }}</p>
+  <ol>{% for b in rec.bullets %}<li>{{ b.text }} <a href="{{ b.source_url }}" target="_blank" rel="noopener">[{{ b.source_n }}]</a></li>{% endfor %}</ol>
+  <p><b>Reused in {{ used.get(fee, [])|length }} ticket(s):</b> {% for q,tid,bi in used.get(fee, []) %}<a href="/ticket/{{ tid }}">{{ q }}</a> (bullet {{ bi }}) {% else %}none yet. Add a question, or open a ticket and use "Re-draft".{% endfor %}</p></section>
+{% else %}<section class="card"><p>No canonical explainer yet. Run the weekly loop and approve its doc entry on the <a href="/weekly">weekly page</a>.</p></section>{% endfor %}
+</main>{% endblock %}

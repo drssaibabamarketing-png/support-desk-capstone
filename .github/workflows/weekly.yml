@@ -1,0 +1,20 @@
+name: weekly-loop
+# Runs the weekly loop on a schedule (Mondays 09:00 IST). It writes nothing: the pulse and explainer are left
+# as PENDING actions for a human to approve in the app. Optionally also triggers the hosted app.
+on:
+  schedule: [{cron: "30 3 * * 1"}]
+  workflow_dispatch: {}
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements.txt
+      - run: DESK_OUT=weekly_out DESK_LOGS=weekly_logs python weekly_job.py
+      - uses: actions/upload-artifact@v4
+        with: {name: weekly-result, path: weekly_out/weekly_job_result.json}
+      - name: Trigger the hosted app (optional)
+        if: ${{ secrets.APP_URL != '' }}
+        run: curl -fsS -X POST "${{ secrets.APP_URL }}/api/weekly/run" -H "X-Token: ${{ secrets.WEEKLY_TOKEN }}"

@@ -1,0 +1,17 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D','lineColor':'#0F8B6D'}}}%%
+flowchart TB
+  subgraph R[Response loop]
+    T1[Q-004 brokerage] & T2[Q-011 brokerage] & T3[… 8 questions] --> K[topic key<br/>fee:Brokerage & trade charges]
+    FA[Facts agent]
+  end
+  subgraph W[Weekly loop]
+    SIG[Support desk signal<br/>asked 8 times]
+    EXP[Fee explainer v1<br/>6 bullets · 2 links]
+  end
+  K -- "① count ≥ 5 inside the window" --> SIG
+  SIG --> PUL[Weekly pulse]
+  EXP --> PUL
+  PUL --> AP{Human approves<br/>doc action}
+  AP -- "② register canonical v1" --> CAN[(Canonical store)]
+  CAN -- "best-matching bullet + its link" --> FA
+  FA --> NEW[New fee question →<br/>REUSED canonical explainer]

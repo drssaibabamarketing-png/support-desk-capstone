@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Support Desk{% endblock %} - Groww Support Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%230F8B6D%27/%3E%3Cpath d=%27M8 17l5 5 11-12%27 stroke=%27white%27 stroke-width=%273.5%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head><body>
+<div class="band"><div class="wrap"><a class="brand" href="/"><i></i>Support Desk</a>
+  <nav class="nav" aria-label="Main">
+    <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Overview</a>
+    <a href="/queue" {% if request.path=='/queue' %}aria-current="page"{% endif %}>Queue</a>
+    <a href="/weekly" {% if request.path.startswith('/weekly') %}aria-current="page"{% endif %}>Weekly pulse</a>
+    <a href="/sources" {% if request.path=='/sources' %}aria-current="page"{% endif %}>Sources</a>
+    <a href="/approvals" {% if request.path=='/approvals' %}aria-current="page"{% endif %}>Approvals{% if pending_actions %} <span class="badge">{{ pending_actions }}</span>{% endif %}</a>
+    <a href="/canonical" {% if request.path=='/canonical' %}aria-current="page"{% endif %}>Canonical explainers</a>
+    <a href="/evals" {% if request.path=='/evals' %}aria-current="page"{% endif %}>Evals</a>
+    {% if auth_on %}{% if reviewer %}<form method="post" action="/logout" class="inl"><button class="linkbtn">Log out</button></form>{% else %}<a href="/login">Reviewer login</a>{% endif %}{% endif %}
+  </nav></div></div>
+{% if auth_on and not reviewer %}<div class="notice"><div class="wrap">Read-only view. You can read everything and submit a question; <a href="/login">log in as a reviewer</a> to edit, approve or reject.</div></div>{% elif not auth_on %}<div class="notice warn"><div class="wrap">Open demo mode: no reviewer password is set, so anyone with this URL can approve actions. Set <code>REVIEWER_PASSWORD</code> before sharing it.</div></div>{% endif %}
+{% block body %}{% endblock %}
+<footer class="foot"><div class="wrap">Facts-only support desk for Groww and HDFC Mutual Fund · public sources only · no personal data stored · nothing is written or sent without a human approving that action · <a href="/evals">evaluation results</a></div></footer>
+</body></html>

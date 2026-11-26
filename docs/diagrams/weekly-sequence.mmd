@@ -1,0 +1,26 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D','actorBkg':'#E3F3EC','actorBorder':'#0F8B6D','signalColor':'#5C6963'}}}%%
+sequenceDiagram
+  autonumber
+  participant S as Scheduler / button
+  participant SV as Service.run_weekly
+  participant W as weekly.build
+  participant Q as Queue metadata
+  participant H as Human
+  participant G as ApprovalGate (per action)
+  participant M as mcp_layer.call_tool
+  S->>SV: trigger (cron, POST /api/weekly/run, or button)
+  SV->>Q: group questions by topic key inside the 7-day window
+  Q-->>SV: groups, signals (count ≥ 5)
+  SV->>W: build(reviews.csv, signals)
+  W->>W: load window · redact · cluster · fee issue · pulse · explainer · checks
+  W-->>SV: run (themes with review ids, quotes, pulse ≤250 words, explainer ≤6 bullets)
+  SV->>G: create 2 PENDING actions (doc append, email draft)
+  Note over SV,G: nothing has been written yet
+  H->>G: approve doc action
+  G->>M: call_tool(append_weekly_record, gate)
+  M->>M: PII re-scan of payload, then write weekly_log.md + audit line
+  M-->>SV: ok
+  SV->>SV: register explainer as canonical v(n+1)
+  H->>G: approve email action (separate click)
+  G->>M: call_tool(create_weekly_email, gate)
+  M-->>H: unsent .eml draft

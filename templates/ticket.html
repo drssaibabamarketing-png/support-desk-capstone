@@ -1,0 +1,69 @@
+{% extends "base.html" %}{% block title %}{{ m.q_id }}{% endblock %}
+{% block body %}
+{% set f = t.outputs.facts %}{% set p = t.outputs.pattern %}{% set c = t.outputs.compliance %}{% set tm = t.timing %}
+<main class="wrap page">
+<p class="mute"><a href="/queue">← Queue</a></p>
+<h1>{{ m.q_id }} <span class="pill {{ 'ok' if m.status=='approved' else ('bad' if m.status=='rejected' else 'warn') }}">{{ 'Waiting for your decision' if m.status=='pending' else m.status|capitalize }}</span>
+ <span class="pill">{{ intent }}</span>{% if m.edited %} <span class="pill">edited by a human</span>{% endif %}</h1>
+<p class="quote" style="color:inherit;border-left-color:var(--signal)">{{ t.message }}</p>
+{% if t.pii_removed %}<p class="mute">Removed before anything was stored: {% for x in t.pii_removed %}<span class="pill warn">{{ x.type }} ×{{ x.count }}</span> {% endfor %}</p>{% endif %}
+{% if msg %}<div class="banner warn" role="alert">{{ msg }}</div>{% endif %}{% if ok %}<div class="banner" style="background:var(--signalbg);color:var(--signal)">{{ ok }}</div>{% endif %}
+<div class="layout">
+<div>
+  <section class="card"><h2>Reply draft</h2>
+    <p class="sub">{{ t.draft.reply.sentences|length }} sentence(s), facts only. Topic counted for the weekly pulse: <b>{{ m.label }}</b>.</p>
+    {% if f.canonical %}<div class="banner" style="background:var(--signalbg);color:var(--signal)">Reused the approved canonical explainer “{{ f.canonical.fee }}” v{{ f.canonical.version }} (bullet {{ f.canonical.bullet_index }}), not drafted fresh. <a href="/canonical">See explainers</a></div>{% endif %}
+    {% if t.draft.routing.hold %}<div class="banner warn">Hold: Facts has a clean answer, but this issue is {{ p.trend }} ({{ p.recent_count }} in the last {{ p.window.recent_days }} days). Do not close the ticket; escalate.</div>{% endif %}
+    {% if t.flagged %}<div class="banner bad">The reviewer flagged this draft after one rework. Approval is switched off.</div>{% endif %}
+    <div class="letter" id="reply-text">{{ t.draft.reply.full_text|reply_html }}</div>
+    <button type="button" class="ghost" id="speak" hidden>🔊 Read the reply aloud</button>
+    {% if m.status=='pending' %}
+    <form method="post" action="/ticket/{{ t.tid }}/edit" class="mt">
+      <label class="mute" for="body"><b>Edit this draft</b> (reply body only; the last-checked line is kept). Every sentence that is not a standard line must carry exactly one source link, and the reviewer re-checks your edit. Only this ticket changes.</label>
+      <textarea id="body" name="body" style="min-height:90px">{{ t.draft.reply.body }}</textarea>
+      <button class="sec" type="submit" style="margin-top:8px">Save edit</button></form>
+    <form method="post" action="/ticket/{{ t.tid }}/redraft" class="mt"><button class="sec" type="submit">Re-draft (re-check for an approved canonical explainer)</button></form>
+    {% endif %}
+  </section>
+  <section class="card"><h2>Internal routing note</h2><p class="sub">For the team, not the customer.</p><p class="routing">{{ t.draft.routing.note }}</p></section>
+  <section class="card"><h2>Three agents, run together</h2>
+    <p class="sub">Started within {{ tm.start_spread_ms }} ms of each other; they never read each other's output.</p>
+    <div class="agents">
+      <div class="agent"><h3>Facts <span class="pill {{ 'ok' if f.status=='covered' else 'warn' }}">{{ 'cited' if f.status=='covered' else 'not covered' }}</span></h3>
+        {% if f.status=='covered' %}<p>{{ f.answer }}</p><a href="{{ f.citation_url }}" target="_blank" rel="noopener">{{ f.citation_url }}</a>
+        {% else %}<p class="mute">Not covered. Searched: {{ f.searched|join('; ') }}</p>{% endif %}</div>
+      <div class="agent pat"><h3>Pattern <span class="pill {{ 'bad' if p.trend=='rising' else ('warn' if p.trend=='recurring' else '') }}">{{ p.trend }}</span></h3>
+        <p>{{ p.similar_count }} similar 1-3★ reviews in {{ p.window.days }} days<br><span class="mute">{{ p.recent_count }} recent vs {{ p.prior_count }} before · {{ p.window.start }} to {{ p.window.end }}</span></p>
+        <p class="mute">Theme: {{ p.theme }}</p></div>
+      <div class="agent cmp"><h3>Compliance <span class="pill {{ 'warn' if c.incoming_status=='flagged' else 'ok' }}">{{ c.incoming_status }}</span></h3>
+        <p>Personal data removed: {{ c.pii_found|map(attribute='type')|join(', ') or 'none' }}<br>Advice or returns asked: {{ 'yes' if c.advice_requested else 'no' }}</p></div>
+    </div>
+  </section>
+</div>
+<aside class="side">
+  <section class="card"><h2>Reviewer</h2>
+    {% for a in t.review_attempts %}<p class="attempt"><b>Attempt {{ a.attempt }}{{ ' (rework)' if a.attempt==2 else '' }}</b>
+      <span class="pill {{ 'ok' if a.passed else 'bad' }}">{{ 'passed' if a.passed else 'failed' }}</span>
+      {% for x in a.failures %}<br><code>{{ x.code }}</code> <span class="mute">{{ x.detail }}</span>{% endfor %}</p>{% endfor %}
+    <p class="mute">Checks: citations, advice wording, return figures, personal data, figures match the fact, 3 sentences or fewer, last-checked date.</p></section>
+  <section class="card refine"><h2>Refine <span class="mute">({{ left }} of {{ cfg.MAX_REFINEMENTS }} left)</span></h2>
+    <p class="sub">Only the agents affected by your note run again.</p>
+    {% if m.status=='pending' and left>0 %}<form method="post" action="/ticket/{{ t.tid }}/refine">
+      <input type="text" name="instruction" placeholder='"shorter", "it is about the mid cap fund"' required aria-label="Refinement">
+      <button class="sec" type="submit">Re-run affected agents</button></form>{% endif %}
+    {% if t.fired_log %}<table style="margin-top:10px"><tr><th>Turn</th><th>Request</th><th>Agents run</th></tr>
+      {% for e in t.fired_log %}<tr><td>{{ e.turn }}</td><td>{{ e.what }}</td><td>{{ e.agents_fired|join(', ') }}</td></tr>{% endfor %}</table>{% endif %}</section>
+  <section class="card approve"><h2>Approval</h2>
+    <p class="sub">Approving writes exactly these two items for this ticket, and nothing else:</p>
+    <ul>{% for w in will %}<li><code>{{ w.tool }}</code> → {{ w.where }}<br><span class="mute">{{ w.what }}</span></li>{% endfor %}</ul>
+    {% if m.status=='pending' %}<form method="post" action="/ticket/{{ t.tid }}/decide" class="actions">
+      <button name="decision" value="approve" {{ 'disabled' if t.send_blocked else '' }}>{{ 'Approve escalation (ticket stays open)' if t.draft.routing.hold else 'Approve and write' }}</button>
+      <button class="sec" name="decision" value="reject">Reject</button></form>
+      {% if t.send_blocked %}<p class="mute">Approval is off because the reviewer flagged this draft.</p>{% endif %}
+    {% elif m.status=='approved' %}<p><b>Written</b> {{ m.gate.decided_at }}. <a href="/saved">View the written files</a></p>
+    {% else %}<p>Rejected. Nothing was written and no other ticket changed.</p>{% endif %}</section>
+</aside></div></main><script>
+(function(){var b=document.getElementById('speak'),el=document.getElementById('reply-text');if(!b||!('speechSynthesis' in window)||!el)return;b.hidden=false;
+ b.addEventListener('click',function(){var s=window.speechSynthesis;if(s.speaking){s.cancel();b.textContent='🔊 Read the reply aloud';return}
+  var u=new SpeechSynthesisUtterance(el.innerText.replace(/\[source\]/g,'source link').replace(/\(https?:[^)]*\)/g,''));u.lang='en-IN';u.onend=function(){b.textContent='🔊 Read the reply aloud'};b.textContent='⏹ Stop reading';s.speak(u)})})();
+</script>{% endblock %}

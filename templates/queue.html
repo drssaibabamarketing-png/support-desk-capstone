@@ -1,0 +1,85 @@
+{% extends "base.html" %}{% block title %}Queue{% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Question queue</h1>
+<p class="lede">Each incoming question runs through three agents at once, the orchestrator and the reviewer. You approve, edit or reject every draft. Personal data is removed before anything is stored.</p>
+<div class="stats">
+  <div class="stat"><b>{{ rows|length }}</b>questions</div>
+  <div class="stat"><b>{{ counts.pending }}</b>waiting for you</div>
+  <div class="stat"><b>{{ counts.approved }}</b>approved</div>
+  <div class="stat"><b>{{ counts.rejected }}</b>rejected</div>
+  <div class="stat"><b>{{ rows|selectattr('t.outputs.facts.canonical')|list|length }}</b>reusing a canonical explainer</div>
+</div>
+<form class="card" method="post" action="/submit">
+  <h2>Add a question to the queue</h2>
+  <div class="submit-inline">
+    <textarea id="message" name="message" placeholder="Type or speak a question. PAN, Aadhaar, phone, email, account numbers and OTPs are removed first." aria-label="Question" required></textarea>
+    <div class="voice">
+      <label for="lang" class="mute">Language</label>
+      <select id="lang" aria-label="Speech language"><option value="en-IN">English (India)</option><option value="hi-IN">हिन्दी</option><option value="kn-IN">ಕನ್ನಡ</option><option value="ta-IN">தமிழ்</option><option value="te-IN">తెలుగు</option><option value="en-US">English (US)</option></select>
+      <button type="button" class="mic" id="mic" title="Speak the question (browser speech input, optional)">🎤 Speak</button>
+    </div>
+    <button type="submit">Add and run</button>
+  </div>
+  <div id="consent" class="card inner" hidden role="dialog" aria-labelledby="consent-h">
+    <b id="consent-h">Before you speak</b>
+    <p class="mute">Voice input uses your <b>browser's own speech recognition</b>. In Chrome the audio is sent to Google's servers, in Edge to Microsoft's; this depends on your browser, not on this app. This app never records, receives or stores audio. Only the text you confirm and submit reaches this server, with personal details removed first. You can always type instead.</p>
+    <button type="button" id="consent-yes">I understand, use my microphone</button> <button type="button" id="consent-no" class="ghost">No, I will type</button>
+  </div>
+  <div id="voice-state" class="mute mt" role="status" aria-live="polite" data-state="idle"></div>
+  <div id="confirm" class="card inner" hidden>
+    <b>I heard:</b> <span id="heard"></span> <span class="mute" id="conf"></span>
+    <div class="mt"><button type="button" id="use">Use this</button> <button type="button" id="again" class="ghost">Speak again</button> <button type="button" id="edit" class="ghost">Edit by typing</button></div>
+  </div>
+  <div id="preview" class="mute mt" role="status" aria-live="polite"></div>
+  <div id="clarify" class="chips mt"></div>
+  <div class="chips mt">{% for e in examples %}<button type="button" class="chip" data-text="{{ e }}">{{ e[:44] }}{{ '…' if e|length>44 }}</button>{% endfor %}</div>
+</form>
+{% if msg %}<div class="banner warn">{{ msg }}</div>{% endif %}
+<section class="card" style="overflow:auto">
+<table class="qtable">
+<tr><th>ID</th><th>Question (as stored: redacted)</th><th>Detected intent</th><th>Draft reply</th><th>Citation</th><th>Reviewer</th><th>Status</th></tr>
+{% for r in rows %}{% set t=r.t %}{% set m=r.m %}{% set rep=t.draft.reply %}
+<tr>
+ <td><a href="/ticket/{{ r.tid }}">{{ m.q_id }}</a><br><span class="mute">{{ m.received_at[5:16] }}</span></td>
+ <td class="q">{{ t.message }}{% if t.pii_removed %}<br>{% for x in t.pii_removed %}<span class="pill warn">{{ x.type }} removed</span>{% endfor %}{% endif %}</td>
+ <td>{{ r.intent }}{% if t.outputs.facts.canonical %}<br><span class="pill ok">canonical v{{ t.outputs.facts.canonical.version }}</span>{% endif %}{% if t.draft.routing.hold %}<br><span class="pill warn">HOLD</span>{% endif %}</td>
+ <td class="d">{% set pb = rep.body|plain %}{{ pb[:150] }}{{ '…' if pb|length>150 }}{% if m.edited %} <span class="pill">edited</span>{% endif %}</td>
+ <td>{% if rep.citation_url %}<a href="{{ rep.citation_url }}" target="_blank" rel="noopener">link</a><br><span class="mute">{{ rep.last_checked }}</span>{% else %}<span class="pill warn">not covered</span>{% endif %}</td>
+ <td>{% if t.flagged %}<span class="pill bad">flagged</span>{% else %}<span class="pill ok">passed</span>{% endif %}</td>
+ <td><span class="pill {{ 'ok' if m.status=='approved' else ('bad' if m.status=='rejected' else 'warn') }}">{{ m.status }}</span></td>
+</tr>{% endfor %}
+</table></section>
+</main>
+<script>
+(function(){
+ var msg=document.getElementById('message'),prev=document.getElementById('preview'),clar=document.getElementById('clarify'),tok=document.querySelector('input[name=csrf_token]').value,timer=null;
+ document.querySelectorAll('.chip').forEach(function(b){b.addEventListener('click',function(){msg.value=b.dataset.text;msg.focus();preview()})});
+ function preview(){clearTimeout(timer);timer=setTimeout(function(){var t=msg.value.trim();if(t.length<6){prev.textContent='';clar.innerHTML='';return}
+  fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':tok},body:JSON.stringify({text:t})}).then(function(r){return r.json()}).then(function(d){
+   prev.textContent=(d.intents.length?'Detected: '+d.intents.join(', ')+'. ':'')+d.message;clar.innerHTML='';
+   if(d.clarify){d.clarify.forEach(function(s){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=s;b.onclick=function(){msg.value=msg.value.replace(/[?.\s]+$/,'')+' for '+s+'?';msg.focus();preview()};clar.appendChild(b)})}
+  }).catch(function(){prev.textContent=''})},350)}
+ msg.addEventListener('input',preview);
+ var R=window.SpeechRecognition||window.webkitSpeechRecognition,b=document.getElementById('mic'),st=document.getElementById('voice-state'),box=document.getElementById('confirm'),
+     heard=document.getElementById('heard'),conf=document.getElementById('conf'),lang=document.getElementById('lang'),rec=null;
+ if(!R){b.style.display='none';lang.style.display='none';document.querySelector('label[for=lang]').style.display='none';st.dataset.state='unsupported';st.textContent='Voice input is not supported in this browser; type the question instead.';return}
+ var errs={'not-allowed':'Microphone permission was denied. Allow the microphone in your browser, then press Speak again.','service-not-allowed':'Speech service is blocked in this browser.',
+   'no-speech':'I did not hear anything. Press Speak and try again.','audio-capture':'No microphone was found.','network':'Speech recognition needs a network connection. Type the question instead.','language-not-supported':'That language is not supported by this browser.','aborted':'Listening was stopped.'};
+ function idle(){b.textContent='🎤 Speak';b.disabled=false}
+ function listen(){box.hidden=true;rec=new R();rec.lang=lang.value;rec.interimResults=true;rec.maxAlternatives=1;var final='',conf0=0;
+  rec.onstart=function(){b.textContent='Listening… (press to stop)';setState('listening','Listening in '+lang.options[lang.selectedIndex].text+'. Speak now.')};
+  rec.onaudioend=function(){setState('processing','Processing what I heard…')};
+  rec.onresult=function(e){var s='';for(var i=0;i<e.results.length;i++){s+=e.results[i][0].transcript;if(e.results[i].isFinal){final=s;conf0=e.results[i][0].confidence}}heard.textContent=s;box.hidden=false;conf.textContent=''};
+  rec.onerror=function(e){setState('error',(errs[e.error]!==undefined?errs[e.error]:('Speech recognition failed ('+e.error+'). You can press Speak to retry or type the question.')));if(e.error==='not-allowed'||e.error==='service-not-allowed'){consented=false}};
+  rec.onend=function(){idle();if(final){heard.textContent=final;conf.textContent=conf0?'(confidence '+Math.round(conf0*100)+'%)':'';box.hidden=false;setState('success','Heard. Check and correct the text below. Nothing is sent to the desk until you press Add and run.')}else if(st.dataset.state!=='error'){setState('error','I did not catch that. Press Speak to try again, or type the question.');box.hidden=true}};
+  rec.start()}
+ var consented=false,consent=document.getElementById('consent');
+ function setState(s,t){st.dataset.state=s;st.textContent=t}
+ b.addEventListener('click',function(){if(b.textContent.indexOf('Listening')===0){rec&&rec.stop();return}if(!consented){consent.hidden=false;return}listen()});
+ document.getElementById('consent-yes').addEventListener('click',function(){consented=true;consent.hidden=true;listen()});
+ document.getElementById('consent-no').addEventListener('click',function(){consent.hidden=true;setState('typed','Voice input is off. Type your question in the box.');msg.focus()});
+ document.getElementById('use').addEventListener('click',function(){msg.value=heard.textContent;box.hidden=true;st.textContent='Added to the box. Edit if needed, then press Add and run.';msg.focus();preview()});
+ document.getElementById('again').addEventListener('click',listen);
+ document.getElementById('edit').addEventListener('click',function(){msg.value=heard.textContent;box.hidden=true;msg.focus();preview()});
+})();
+</script>{% endblock %}

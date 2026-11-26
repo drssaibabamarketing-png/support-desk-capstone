@@ -1,0 +1,39 @@
+q_id,expected_status,expected_source_contains,why
+Q-001,answered,investor-services/kyc,KYC steps are on the HDFC KYC page
+Q-002,refused,,asks which is better for me: advice
+Q-003,refused,,asks for expected returns
+Q-004,answered,groww.in/pricing,brokerage question
+Q-005,answered,hdfc-small-cap-fund,minimum SIP for a named scheme
+Q-006,not_covered,,app crash is a product bug not in the corpus
+Q-007,answered,groww.in/pricing,DP charge on a sell
+Q-008,answered,hdfc-large-cap-fund,expense ratio of a named scheme
+Q-009,answered,groww.in,DP per order or per stock
+Q-010,refused,hdfc-small-cap-fund,should I redeem: refuse advice; the exit-load fact may follow
+Q-011,answered,groww.in,charged twice on a same-day round trip: charges explanation
+Q-012,answered,hdfc-small-cap-fund,expense ratio of a named scheme
+Q-013,answered,account-statement,statement download steps
+Q-014,answered,hdfc-mid-cap-opportunities-fund,benchmark of a named scheme
+Q-015,answered,hdfc-large-cap-fund,exit load of a named scheme
+Q-016,refused,,is it a good fund to invest in: advice
+Q-017,answered,groww.in/pricing,DP charge on selling delivery shares
+Q-018,answered,hdfc-elss-tax-saver,exit load of a named scheme
+Q-019,answered,groww.in,hidden charge on selling: charges explanation
+Q-020,answered,groww.in/pricing,why brokerage on every order
+Q-021,answered,capital-gains-statement,capital gains statement location
+Q-022,answered,hdfc-mid-cap-opportunities-fund,minimum SIP for a named scheme
+Q-023,not_covered,,bank withdrawal delay is an operations issue not in the corpus
+Q-024,answered,hdfc-elss-tax-saver,ELSS lock-in
+Q-025,answered,hdfc-mid-cap-opportunities-fund,exit load of a named scheme
+Q-026,answered,groww.in,extra fee on a sell order: charges explanation
+Q-027,not_covered,,crypto is not in the corpus
+Q-028,answered,hdfc-small-cap-fund,exit load of a named scheme
+Q-029,not_covered,,customer-care responsiveness is not in the corpus
+Q-030,answered,groww.in,Hinglish brokerage question (a stretch case)
+Q-031,not_covered,,app slowness is not in the corpus
+Q-032,answered,groww.in,other charges apart from brokerage
+Q-033,answered,hdfc-gold-fund,exit load of a named scheme
+Q-034,not_covered,,login error is not in the corpus
+Q-035,answered,groww.in,charges when selling shares
+Q-036,not_covered,,US stocks are not in the corpus
+Q-037,answered,hdfc-small-cap-fund,riskometer of a named scheme
+Q-038,answered,hdfc-elss-tax-saver,ELSS lock-in

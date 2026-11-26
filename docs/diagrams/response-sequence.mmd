@@ -1,0 +1,30 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D','actorBkg':'#E3F3EC','actorBorder':'#0F8B6D'}}}%%
+sequenceDiagram
+  autonumber
+  participant U as Question
+  participant D as Desk.submit
+  participant F as Facts
+  participant P as Pattern
+  participant C as Compliance
+  participant O as Orchestrator
+  participant R as Reviewer
+  participant H as Human
+  U->>D: raw text
+  D->>D: pii.redact as the first line, raw text discarded
+  par three agents run in parallel
+    D->>F: redacted message
+    D->>P: redacted message
+    D->>C: redacted message
+  end
+  F-->>D: canonical bullet, or corpus fact with 1 link, or not_covered with what was searched
+  P-->>D: one-off or recurring or rising, with counts and window
+  C-->>D: PII types, advice asked?
+  D->>O: three outputs
+  O-->>D: reply (≤3 sentences) + routing note
+  D->>R: draft
+  alt fails a hard check
+    R-->>O: failure codes (one rework round)
+    O-->>R: second draft
+  end
+  R-->>H: passed, or flagged with approval disabled
+  H->>H: edit (re-reviewed), approve or reject

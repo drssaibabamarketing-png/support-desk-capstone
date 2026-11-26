@@ -1,0 +1,7 @@
+.git
+__pycache__
+*.pyc
+logs
+outputs/evals/runtime
+docs/screenshots
+.env

@@ -1,0 +1,14 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D'}}}%%
+stateDiagram-v2
+  [*] --> pending: draft / action created
+  pending --> pending: edit (reviewer re-checks, may refuse)
+  pending --> approved: human approves<br/>(blocked if reviewer flagged)
+  pending --> rejected: human rejects
+  pending --> superseded: weekly loop re-run (actions only)
+  approved --> written: call_tool runs exactly this action's writes
+  rejected --> [*]: nothing written
+  written --> [*]
+  note right of approved
+    approving one action never approves another;
+    each action owns its own ApprovalGate
+  end note

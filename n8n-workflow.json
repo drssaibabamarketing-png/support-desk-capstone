@@ -1,0 +1,145 @@
+{
+  "name": "Support Desk - weekly loop trigger (optional, untested)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron",
+      "name": "Every Monday 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-APP.onrender.com/api/weekly/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Token",
+              "value": "YOUR_WEEKLY_TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "run",
+      "name": "Run weekly loop",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.checks_passed}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if",
+      "name": "All output checks passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "YOU@example.com",
+        "subject": "=Weekly pulse ready for approval: {{$json.window}}",
+        "text": "=The weekly loop ran ({{$json.pulse_words}} words). Two writes are waiting for approval in the Support Desk app (Weekly pulse page). Nothing has been written or sent."
+      },
+      "id": "ok",
+      "name": "Notify: ready to approve",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        960,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "YOU@example.com",
+        "subject": "Weekly loop: an output check FAILED",
+        "text": "Open the Support Desk app, Weekly pulse page, and read the check list."
+      },
+      "id": "bad",
+      "name": "Notify: checks failed",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        960,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday 09:00": {
+      "main": [
+        [
+          {
+            "node": "Run weekly loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run weekly loop": {
+      "main": [
+        [
+          {
+            "node": "All output checks passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All output checks passed?": {
+      "main": [
+        [
+          {
+            "node": "Notify: ready to approve",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: checks failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

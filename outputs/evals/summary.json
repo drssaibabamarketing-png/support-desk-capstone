@@ -1,0 +1,42 @@
+{
+  "feasibility": {
+    "passed": 13,
+    "total": 13
+  },
+  "edit_correctness": {
+    "passed": 16,
+    "total": 16
+  },
+  "grounding_compliance": {
+    "passed": 26,
+    "total": 26
+  },
+  "regressions": {
+    "passed": 17,
+    "total": 17
+  },
+  "golden": {
+    "passed": 39,
+    "total": 39
+  },
+  "mcp_server": {
+    "passed": 13,
+    "total": 13
+  },
+  "persistence": {
+    "passed": 5,
+    "total": 5
+  },
+  "approval_security": {
+    "passed": 12,
+    "total": 12
+  },
+  "privacy_pathways": {
+    "passed": 10,
+    "total": 10
+  },
+  "requirements": {
+    "passed": 18,
+    "total": 18
+  }
+}

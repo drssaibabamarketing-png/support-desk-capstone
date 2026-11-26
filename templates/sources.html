@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Sources{% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Sources</h1>
+<p class="lede">Public sources only. Every factual claim in a reply or explainer carries one link from this list, with the date it was last checked.</p>
+<section class="card" style="overflow:auto"><h2>Source list</h2><table><tr><th>Source</th><th>Last checked</th><th>Replies citing it</th><th>Explainer bullets</th></tr>
+{% for s in srcs %}<tr><td><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></td><td>{{ s.checked }}</td><td>{{ s.replies }}</td><td>{{ s.bullets }}</td></tr>{% endfor %}
+<tr><td>Groww Play Store reviews export (<code>data/reviews.csv</code>, ids R1 to R8629)</td><td>export ends {{ review_end.strftime('%d %b %Y') }}</td><td colspan="2">Every theme, quote and count in the pulse cites review ids and a stated window.</td></tr></table></section>
+<section class="card" style="overflow:auto"><h2>Where each claim in the queue came from</h2><table><tr><th>Question</th><th>Claim</th><th>Source</th><th>Checked</th></tr>
+{% for c in claims %}<tr><td>{{ c.q }}</td><td>{{ c.claim }}{% if c.canon %} <span class="pill ok">canonical</span>{% endif %}</td><td><a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.url }}</a></td><td>{{ c.checked }}</td></tr>{% endfor %}</table></section>
+{% if run %}<section class="card"><h2>Latest pulse claims → review ids</h2><p>Window {{ run.window }}. Quotes: {% for q in run.quotes %}<code>{{ q.rid }}</code> {% endfor %}. Theme counts trace to the review ids on the <a href="/weekly">weekly page</a>.</p></section>{% endif %}
+</main>{% endblock %}

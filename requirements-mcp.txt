@@ -1,0 +1,2 @@
+# the MCP SDK is now part of requirements.txt; this file is kept for older instructions
+-r requirements.txt

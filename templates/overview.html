@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block title %}Overview{% endblock %}
+{% block body %}
+<header class="hero2"><div class="wrap">
+  <p class="eyebrow">Groww × HDFC Mutual Fund · Capstone</p>
+  <h1>One desk for support and product.</h1>
+  <p>Reviews become themes. Questions become cited, compliance-checked drafts. A weekly pulse goes to the product team, and the fee explainer it produces becomes the answer support reuses. Every write waits for a human.</p>
+  <div class="cta"><a class="btn" href="/weekly">Open the weekly pulse</a><a class="btn ghost" href="/queue">Open the queue</a></div>
+</div></header>
+<main class="wrap page2">
+<div class="kpis">
+  <div class="kpi"><b>{{ run.n_reviews if run else '–' }}</b><span>unique review texts in the window</span><small>{{ run.window if run else 'run the weekly loop' }} · duplicates and texts under 4 words removed</small></div>
+  <div class="kpi"><b>{{ n_q }}</b><span>questions in the queue</span><small>{{ pending }} waiting · {{ approved }} approved</small></div>
+  <div class="kpi"><b>{{ run.fee.mentions if run else '–' }}</b><span>reviews mention {{ run.fee.fee|lower if run else 'a fee' }}</span><small>{{ run.fee.negative_mentions if run else '' }} rated 1-2★</small></div>
+  <div class="kpi"><b>{{ reused }}</b><span>replies reusing a canonical explainer</span><small>{{ canon|length }} explainer(s) approved</small></div>
+  <div class="kpi warn"><b>{{ n_actions }}</b><span>writes waiting for approval</span><small><a href="/approvals">open approvals</a></small></div>
+</div>
+
+<section class="card loopmap"><h2>Two loops, one system</h2>
+<p class="sub">The weekly loop runs on a schedule and writes nothing until approved; the response loop gives each question a draft that a human approves. The numbers are live. Arrows ① and ② are the connection this capstone adds.</p>
+<svg viewBox="0 0 960 250" role="img" aria-label="Weekly loop and response loop with the two connections between them" class="map">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--signal)"/></marker></defs>
+  <g class="lane"><rect x="10" y="10" width="940" height="84" rx="14"/><text x="26" y="34" class="lt">WEEKLY LOOP</text></g>
+  <g class="lane"><rect x="10" y="156" width="940" height="84" rx="14"/><text x="26" y="180" class="lt">RESPONSE LOOP</text></g>
+  {% set top=[('Reviews CSV','8,629 rows'),('Themes (max 5)', (run.themes|length ~ ' themes') if run else ''),('Fee confusion', (run.fee.mentions ~ ' mentions') if run else ''),('Pulse + explainer', (run.pulse_words ~ ' words') if run else ''),('Approval gates','2 weekly writes')] %}
+  {% for n,s in top %}<g class="node"><rect x="{{ 30 + loop.index0*182 }}" y="42" width="160" height="44" rx="10"/><text x="{{ 110 + loop.index0*182 }}" y="60" text-anchor="middle" class="nt">{{ n }}</text><text x="{{ 110 + loop.index0*182 }}" y="76" text-anchor="middle" class="ns">{{ s }}</text></g>{% endfor %}
+  {% set bot=[('Question queue', n_q ~ ' questions'),('3 agents in parallel','Facts · Pattern · Compliance'),('Orchestrator','≤3 sentences, 1 link'),('Reviewer','hard fails, 1 rework'),('Human','edit · approve · reject')] %}
+  {% for n,s in bot %}<g class="node"><rect x="{{ 30 + loop.index0*182 }}" y="188" width="160" height="44" rx="10"/><text x="{{ 110 + loop.index0*182 }}" y="206" text-anchor="middle" class="nt">{{ n }}</text><text x="{{ 110 + loop.index0*182 }}" y="222" text-anchor="middle" class="ns">{{ s }}</text></g>{% endfor %}
+  <path d="M 192 64 H 210 M 374 64 H 392 M 556 64 H 574 M 738 64 H 756 M 192 210 H 210 M 374 210 H 392 M 556 210 H 574 M 738 210 H 756" class="flow" marker-end="url(#ar)"/>
+  <path d="M 150 186 V 124 H 656 V 90" class="link" marker-end="url(#ar)"/>
+  <text x="170" y="116" class="ll">① a question asked 5+ times in the week → "Support desk signal" in the pulse</text>
+  <path d="M 838 90 V 184" class="link" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+  <text x="826" y="150" text-anchor="end" class="ll">② approved explainer → canonical answer the Facts agent reuses</text>
+</svg></section>
+
+<div class="grid2">
+  <section class="card"><h2>Themes this week</h2><p class="sub">{{ run.window if run else '' }} · bar = reviews, green = top 3 in the pulse</p>
+    {% for b in themes %}<div class="bar"><span class="bl">{{ b.label }}</span><span class="bt"><i class="{{ 'hot' if b.hot }}" style="width:{{ b.pct }}%"></i></span><span class="bn">{{ b.n }}</span></div>{% else %}<p class="mute">Run the weekly loop.</p>{% endfor %}</section>
+  <section class="card"><h2>What the queue asks</h2><p class="sub">Topics asked in the same window. Green = asked {{ cfg.RECURRING_QUESTION_MIN }}+ times, so it reaches the pulse.</p>
+    {% for b in topics %}<div class="bar"><span class="bl">{{ b.label }}</span><span class="bt"><i class="{{ 'hot' if b.hot }}" style="width:{{ b.pct }}%"></i></span><span class="bn">{{ b.n }}</span></div>{% endfor %}</section>
+</div>
+
+<section class="card"><h2>{{ run.fee.fee if run else 'Fee' }} mentions, week by week</h2>
+<p class="sub">Reviews mentioning the fee per 7-day bin (line), of which rated 1-2★ (dashed). Source: the same reviews export, ids on the weekly page.</p>
+{% if pts %}<svg viewBox="0 0 {{ W }} {{ H }}" class="trend" role="img" aria-label="Weekly fee mentions">
+  <line x1="28" y1="{{ H-24 }}" x2="{{ W-28 }}" y2="{{ H-24 }}" class="axis"/>
+  <polyline points="{% for p in pts %}{{ p.x }},{{ p.y }} {% endfor %}" class="ln"/>
+  <polyline points="{% for p in pts %}{{ p.x }},{{ p.yn }} {% endfor %}" class="ln2"/>
+  {% for p in pts %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.6" class="dot"><title>{{ p.week_end }}: {{ p.mentions }} mentions, {{ p.negative }} rated 1-2★, of {{ p.reviews }} reviews</title></circle>
+  <text x="{{ p.x }}" y="{{ p.y-8 }}" text-anchor="middle" class="pv">{{ p.mentions }}</text><text x="{{ p.x }}" y="{{ H-8 }}" text-anchor="middle" class="px">{{ p.week_end }}</text>{% endfor %}</svg>{% else %}<p class="mute">Run the weekly loop.</p>{% endif %}</section>
+</main>{% endblock %}

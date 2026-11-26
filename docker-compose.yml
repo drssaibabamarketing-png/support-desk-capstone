@@ -1,0 +1,16 @@
+services:
+  support-desk:
+    build: .
+    ports: ["5000:5000"]
+    environment:
+      - PORT=5000
+      - WEEKLY_TOKEN=${WEEKLY_TOKEN:-}
+      - REAL_CLOCK=${REAL_CLOCK:-0}
+      - REVIEWER_PASSWORD=${REVIEWER_PASSWORD:-}
+      - SECRET_KEY=${SECRET_KEY:-}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-}
+      - DESK_DB=/app/state/state.db
+    volumes:
+      - ./outputs:/app/outputs        # approved writes survive container restarts
+      - ./data_state:/app/state       # SQLite journal: approvals, edits, live questions, canonical explainers
+    restart: unless-stopped

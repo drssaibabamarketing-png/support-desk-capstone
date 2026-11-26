@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% block title %}Weekly pulse{% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Weekly pulse</h1>
+<p class="lede">Reviews → at most 5 themes → top 3 → the fee users are confused about → pulse (250 words or fewer) and fee explainer (6 bullets or fewer). Running it writes nothing; the two writes wait for your approval below.</p>
+<form method="post" action="/weekly/run"><button type="submit">{{ 'Run the weekly loop again' if run else 'Run the weekly loop' }}</button></form>
+{% if msg %}<div class="banner warn mt">{{ msg }}</div>{% endif %}
+<section class="card inner mt"><b>Data source:</b> {{ source }}.
+ {% if 'bundled' in source %}<span class="mute">The weekly window is the newest 7 days in the bundled review export (it ends 29 Aug 2026), so this is a replay of a past week, not this week's reviews.</span>{% endif %}
+ <form method="post" action="/weekly/upload" enctype="multipart/form-data" class="mt"><label for="rv">Use a newer reviews CSV (text, rating and date columns; personal data is removed before it is saved):</label>
+ <input id="rv" type="file" name="reviews" accept=".csv,text/csv"> <button type="submit" class="ghost">Upload and run</button></form></section>
+{% if not run %}<p class="mute mt">Not run yet in this session. It completes on its own once triggered (the same job runs on a schedule from GitHub Actions).</p>{% else %}
+<p class="mute mt">Run <code>{{ run.run_id }}</code> · window <b>{{ run.window_exact }}</b> ({{ run.days }} days) · {{ run.n_reviews }} unique substantive review texts (duplicates and texts under 4 words removed) from the export of {{ run.rows_in_export }} rows · personal data redacted at ingest: {{ run.pii_redacted_at_ingest }}</p>
+<div class="grid2 mt">
+<div>
+  <section class="card"><h2>Pulse <span class="pill {{ 'ok' if run.pulse_words<=250 else 'bad' }}">{{ run.pulse_words }} / 250 words</span></h2>
+    <div class="pulse">{{ run.pulse|md }}</div></section>
+  <section class="card"><h2>Fee explainer <span class="pill ok">{{ run.explainer.bullets|length }} / 6 bullets</span></h2>
+    <p class="sub">Fee issue found in the reviews: <b>{{ run.fee.fee }}</b> — {{ run.fee.mentions }} reviews mention it, {{ run.fee.negative_mentions }} rated 1-2★, in {{ run.window }}.</p>
+    <ul>{% for b in run.explainer.bullets %}<li>{{ b.text }} <a href="{{ b.source_url }}" target="_blank" rel="noopener">[{{ b.source_n }}]</a></li>{% endfor %}</ul>
+    <p class="mute">{% for s in run.explainer.sources %}[{{ s.n }}] <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a> (checked {{ s.last_checked }}) {% endfor %}<br>Last checked: {{ run.explainer.last_checked }}</p></section>
+  <section class="card"><h2>Checks run on this output</h2>
+    {% for n,ok,d in run.checks %}<div class="check"><span class="pill {{ 'ok' if ok else 'bad' }}">{{ 'pass' if ok else 'FAIL' }}</span> {{ n }} <span class="mute">{{ d }}</span></div>{% endfor %}</section>
+</div>
+<div>
+  <section class="card"><h2>Themes and the reviews behind them</h2><p class="sub">Window {{ run.window }}. Every theme lists its review ids (row ids in the Play Store export).</p>
+    <table><tr><th>Theme</th><th>Reviews</th><th>Avg ★</th><th>1-2★</th></tr>
+    {% for t in run.themes %}<tr><td><b>{{ t.label }}</b>{% if t.is_top3 %} <span class="pill ok">top 3</span>{% endif %}
+      <details><summary>{{ t.review_ids|length }} review ids</summary><div class="ids">{{ t.review_ids|join(', ') }}</div></details></td>
+      <td>{{ t.count }} ({{ t.share_pct }}%)</td><td>{{ t.avg_rating }}</td><td>{{ t.negative_pct }}%</td></tr>{% endfor %}</table></section>
+  <section class="card"><h2>Quotes</h2>{% for q in run.quotes %}<p>“{{ q.quote }}”<br><span class="mute">{{ q.rid }} · {{ q.rating }}★ · {{ q.theme }}</span></p>{% endfor %}</section>
+  <section class="card"><h2>From the response loop (same window)</h2>
+    <p class="sub">Questions grouped by topic. A topic asked {{ cfg.RECURRING_QUESTION_MIN }} or more times is added to the pulse.</p>
+    <table><tr><th>Topic</th><th>Asked</th><th>Canonical reuse</th><th>In pulse</th></tr>
+    {% for g in run.question_groups %}<tr><td>{{ g.label }}<br><span class="mute">{{ g.q_ids|join(', ') }}</span></td><td>{{ g.count }}</td><td>{{ g.reused }}</td>
+      <td>{% if g.count>=cfg.RECURRING_QUESTION_MIN and g.key!='advice' and not g.key.startswith('other:') %}<span class="pill ok">yes</span>{% else %}<span class="pill">no</span>{% endif %}</td></tr>{% endfor %}</table></section>
+  <section class="card"><h2>Fee mentions: review ids</h2><details><summary>{{ run.fee.review_ids|length }} reviews mention {{ run.fee.fee|lower }}</summary><div class="ids">{{ run.fee.review_ids|join(', ') }}</div></details></section>
+</div></div>
+<h2 class="mt">Approval: what will be written, and where</h2>
+{% for a,pl in acts %}<div class="action {{ 'done' if a.status=='approved' else ('rej' if a.status!='pending' else '') }}">
+  <b>{{ a.tool }}</b> → {{ a.where }} <span class="pill {{ 'ok' if a.status=='approved' else ('bad' if a.status=='rejected' else 'warn') }}">{{ a.status }}</span>
+  <p class="mute">{{ a.what }}. Approving this action does not trigger the other one.{% if a.tool=='append_weekly_record' %} Approving it also registers the explainer as the canonical answer the response loop reuses.{% endif %}</p>
+  <details><summary>Exact content</summary><pre class="doc">{% if a.tool=='append_weekly_record' %}{{ pl.entry_md }}{% else %}Subject: {{ pl.subject }}
+
+{{ pl.body }}{% endif %}</pre></details>
+  {% if a.status=='pending' %}<form method="post" action="/action/{{ a.id }}/decide" class="actions"><button name="decision" value="approve">Approve this action</button><button class="sec" name="decision" value="reject">Reject</button></form>{% endif %}
+</div>{% endfor %}
+{% endif %}</main>{% endblock %}

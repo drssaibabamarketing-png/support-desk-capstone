@@ -1,0 +1,22 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D','lineColor':'#5C6963','fontFamily':'Inter, Segoe UI, sans-serif'}}}%%
+sequenceDiagram
+  autonumber
+  actor H as Reviewer
+  participant W as Web app
+  participant G as ApprovalGate
+  participant C as MCP client
+  participant S as MCP server
+  participant F as outputs and audit log
+  H->>W: click Approve on one action
+  W->>G: decide approved
+  W->>W: issue signed receipt bound to tool and exact arguments
+  W->>C: call tool with receipt id and arguments
+  C->>S: tools/call over stdio
+  S->>S: verify signature and tool and argument hash and unused
+  alt receipt missing or content changed or replayed
+    S-->>C: error, nothing written
+  else valid
+    S->>S: required arguments and PII re-scan
+    S->>F: write file and append audit line
+    S-->>C: result ok, sent false
+  end

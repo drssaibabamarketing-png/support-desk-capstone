@@ -1,0 +1,41 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E3F3EC','primaryBorderColor':'#0F8B6D','primaryTextColor':'#16211D','lineColor':'#5C6963','fontFamily':'Inter, Segoe UI, sans-serif'}}}%%
+flowchart TB
+  subgraph IN[Inputs]
+    CSV[(Play Store reviews<br/>8,629 rows · ids R1…R8629)]
+    QQ[/Incoming questions<br/>queue/]
+    COR[(M1 corpus<br/>HDFC · AMFI · SEBI · Groww pages)]
+  end
+  subgraph WK[Weekly loop · weekly.py]
+    W1[Load newest 7 days<br/>redact PII] --> W2[TF-IDF → LSA → KMeans<br/>max 5 themes · top 3]
+    W2 --> W3[Fee confusion<br/>counts + review ids]
+    W3 --> W4[Pulse ≤250 words<br/>Explainer ≤6 bullets]
+  end
+  subgraph RS[Response loop · desk.py]
+    R1{{Input gate<br/>PII redaction}} --> A1[Facts agent]
+    R1 --> A2[Pattern agent]
+    R1 --> A3[Compliance agent]
+    A1 --> OR[Orchestrator<br/>≤3 sentences · 1 link]
+    A2 --> OR
+    A3 --> OR
+    OR --> RV{Reviewer<br/>hard fails}
+  end
+  CSV --> W1
+  CSV --> A2
+  COR --> A1
+  QQ --> R1
+  RS -- "① topic asked ≥5× in the window" --> W4
+  W4 -- "② approved explainer = canonical answer" --> A1
+  W4 --> G1[/Gate 1 · doc append/]
+  W4 --> G2[/Gate 2 · email draft/]
+  RV --> HU([Human: edit · approve · reject]) --> G3[/Gate 3 · ticket record + reply draft/]
+  AUTH{{Reviewer login + CSRF<br/>read-only for everyone else}} --> HU
+  AUTH --> G1
+  AUTH --> G2
+  G1 --> MCP[[call_tool: gate approved?<br/>signed single-use receipt]]
+  G2 --> MCP
+  G3 --> MCP
+  MCP -- "MCP_TRANSPORT=stdio" --> SRV[[MCP server · mcp_server.py<br/>verifies receipt · PII scan · audit]]
+  MCP -- "default: in-process" --> OUT
+  SRV --> OUT[(outputs/ · weekly_log.md · .eml drafts<br/>support_log.md · audit_log.jsonl)]
+  HU -. "decisions journalled" .-> DB[(SQLite journal<br/>restored on restart)]
+  G1 -. journalled .-> DB

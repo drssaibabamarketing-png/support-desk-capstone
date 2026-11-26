@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Approvals{% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Approvals</h1>
+<p class="lede">Every write goes through its own gate. Each card says exactly what will be written and where, before you decide. Nothing is ever sent: email is created as an unsent draft.</p>
+<section class="card"><h2>Reply drafts</h2><p class="sub">{{ pend_t }} ticket(s) waiting. Each ticket page shows its own two writes and has its own Approve / Reject. <a href="/queue">Open the queue</a>.</p></section>
+<h2>Weekly actions</h2>
+{% for a,pl in acts %}<div class="action {{ 'done' if a.status=='approved' else ('rej' if a.status!='pending' else '') }}">
+  <b>{{ a.tool }}</b> → {{ a.where }} <span class="pill {{ 'ok' if a.status=='approved' else ('bad' if a.status=='rejected' else 'warn') }}">{{ a.status }}</span>
+  <p class="mute">{{ a.what }} · run {{ a.run_id }}</p>
+  <details><summary>Exact content</summary><pre class="doc">{% if a.tool=='append_weekly_record' %}{{ pl.entry_md }}{% else %}Subject: {{ pl.subject }}
+
+{{ pl.body }}{% endif %}</pre></details>
+  {% if a.status=='pending' %}<form method="post" action="/action/{{ a.id }}/decide" class="actions"><button name="decision" value="approve">Approve this action</button><button class="sec" name="decision" value="reject">Reject</button></form>{% endif %}</div>
+{% else %}<p class="mute">No weekly actions yet. <a href="/weekly">Run the weekly loop</a>.</p>{% endfor %}
+<h2 class="mt">Audit log (what was actually written)</h2>
+<section class="card" style="overflow:auto"><table><tr><th>Time</th><th>Tool</th><th>Gate</th><th>Approved at</th><th>Result</th></tr>
+{% for e in audit %}<tr><td>{{ e.ts }}</td><td>{{ e.tool }}</td><td>{{ e.gate }}</td><td>{{ e.approved_at }}</td><td>{{ e.result.path }}</td></tr>{% else %}<tr><td colspan="5" class="mute">Nothing written yet.</td></tr>{% endfor %}</table>
+<p><a href="/saved">View written files</a></p></section></main>{% endblock %}

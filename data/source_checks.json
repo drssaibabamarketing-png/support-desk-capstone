@@ -1,0 +1,26 @@
+{
+  "_note": "Checked on 26 Nov 2026: five HDFC scheme pages (expense ratio, minimum SIP, exit load), groww.in/pricing, and two Groww Help Centre pages (DP per order; charges in the report). The HDFC pages show no as-of date for the expense ratio, so it is current only on the check date. groww.in/help (the Help Centre home) and the SEBI/AMFI pages keep their older dates because they were not re-opened.",
+  "default": "22 Oct 2026",
+  "sources": {
+    "https://groww.in/help": "22 Oct 2026",
+    "https://groww.in/pricing": "26 Nov 2026",
+    "https://investor.sebi.gov.in/": "22 Oct 2026",
+    "https://www.amfiindia.com/": "22 Oct 2026",
+    "https://www.amfiindia.com/investor-corner": "22 Oct 2026",
+    "https://www.hdfcfund.com/about-us/corporate-governance": "22 Oct 2026",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-elss-tax-saver/direct": "26 Nov 2026",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-gold-fund/direct": "26 Nov 2026",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-large-cap-fund/direct": "26 Nov 2026",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-mid-cap-opportunities-fund/direct": "26 Nov 2026",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct": "26 Nov 2026",
+    "https://www.hdfcfund.com/investor-services/download-statements/account-statement": "22 Oct 2026",
+    "https://www.hdfcfund.com/investor-services/download-statements/capital-gains-statement": "22 Oct 2026",
+    "https://www.hdfcfund.com/investor-services/downloads/forms": "22 Oct 2026",
+    "https://www.hdfcfund.com/investor-services/kyc": "22 Oct 2026",
+    "https://www.hdfcfund.com/statutory-disclosure/nav-and-idcw": "22 Oct 2026",
+    "https://www.sebi.gov.in/legal/master-circulars/may-2023/master-circular-for-mutual-funds_71438.html": "22 Oct 2026",
+    "https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doFaq=yes": "22 Oct 2026",
+    "https://groww.in/help/stocks/searchable/are-dp-charges-per-stock-or-per-order": "26 Nov 2026",
+    "https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report": "26 Nov 2026"
+  }
+}
