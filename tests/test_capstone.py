@@ -105,6 +105,33 @@ class AccessControl(unittest.TestCase):
         self.assertEqual(self.c.get("/queue").status_code, 302)
         self.assertIn("not configured", self.c.get("/login").get_data(as_text=True))
 
+    def test_login_limit_cannot_be_bypassed_with_x_forwarded_for(self):
+        self.A._FAILS.clear()
+        tok = self._tok()
+        codes = [self.c.post("/login", data={"password": "bad", "csrf_token": tok},
+                             headers={"X-Forwarded-For": f"10.0.0.{i}"}).status_code for i in range(7)]
+        self.A._FAILS.clear()
+        self.assertEqual(codes[:5], [401] * 5)
+        self.assertEqual(codes[5:], [429, 429])               # a new spoofed address per request does not reset the limit
+
+    def test_csp_allows_only_our_nonce_tagged_scripts(self):
+        import re
+        tok = self._tok()
+        self.c.post("/login", data={"password": "pw-test", "csrf_token": tok})
+        for path in ("/queue", f"/ticket/{self.A.SVC.order[0]}", "/demo"):
+            r = self.c.get(path)
+            csp = r.headers["Content-Security-Policy"]
+            self.assertIn("frame-ancestors 'none'", csp)
+            self.assertNotIn("'unsafe-inline'", csp.split("script-src")[1].split(";")[0])
+            nonce = re.search(r"'nonce-([^']+)'", csp).group(1)
+            html = r.get_data(as_text=True)
+            self.assertEqual(html.count("<script"), html.count(f'<script nonce="{nonce}">'), path)
+
+    def test_docker_build_context_excludes_secrets_and_runtime_state(self):
+        ign = (Path(__file__).resolve().parent.parent / ".dockerignore").read_text(encoding="utf-8").split()
+        for must in ("outputs/.approval_key", "outputs/receipts", "outputs/audit_log.jsonl", "data_state", "*.db", ".env", "logs"):
+            self.assertIn(must, ign)
+
     def test_login_redirect_stays_on_this_site(self):
         for bad in ("//evil.example", "/\\evil.example", "https://evil.example", "javascript:alert(1)"):
             self.assertEqual(self.A.safe_next(bad), "/")

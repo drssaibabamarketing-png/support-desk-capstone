@@ -19,6 +19,9 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 app.config.update(SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(32), SESSION_COOKIE_HTTPONLY=True,
                   SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=bool(os.environ.get("COOKIE_SECURE")),
                   PERMANENT_SESSION_LIFETIME=8 * 3600)
+if int(os.environ.get("PROXY_HOPS", "0")) > 0:                 # e.g. 1 on Render: trust exactly that many proxies
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=int(os.environ["PROXY_HOPS"]), x_proto=int(os.environ["PROXY_HOPS"]))
 
 # ---------------------------------------------------------------- access control (fail closed)
 # The live desk (queue, tickets, weekly actions, approvals, audit, written files, sources-by-ticket, live numbers) and
@@ -71,22 +74,38 @@ def guard():
 
 @app.after_request
 def add_csrf_and_headers(resp):
+    nonce = secrets.token_urlsafe(16)
     if resp.mimetype == "text/html" and not resp.direct_passthrough:
         html = resp.get_data(as_text=True)
         tag = f'<input type="hidden" name="csrf_token" value="{csrf_token()}">'
         html = re.sub(r"(<form\b[^>]*method=[\"']post[\"'][^>]*>)", lambda m: m.group(1) + tag, html, flags=re.I)
+        html = html.replace("<script>", f'<script nonce="{nonce}">')     # only our own inline scripts may run
         resp.set_data(html)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
+    # Script: only same-origin files and the nonce-tagged inline blocks (no inline handlers, no eval, no third parties).
+    # Style: inline style attributes are used by the templates, so 'unsafe-inline' is kept for styles only.
+    resp.headers.setdefault("Content-Security-Policy", "; ".join([
+        "default-src 'self'", f"script-src 'self' 'nonce-{nonce}'", "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:", "connect-src 'self'", "form-action 'self'", "frame-ancestors 'none'",
+        "base-uri 'none'", "object-src 'none'"]))
+    if app.config["SESSION_COOKIE_SECURE"]:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     return resp
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?").split(",")[0].strip()
+        # The client address comes from remote_addr, never from a raw X-Forwarded-For header (any client can send one,
+        # so the limit could be bypassed by changing it per request). Behind a proxy set PROXY_HOPS so ProxyFix takes
+        # the address that the trusted proxy appended.
+        ip = request.remote_addr or "?"
         now = time.time()
+        if len(_FAILS) > 10_000:                               # bound memory: forget addresses with no recent failure
+            for k in [k for k, v in _FAILS.items() if not v or now - v[-1] >= 60]:
+                del _FAILS[k]
         recent = [t for t in _FAILS.get(ip, []) if now - t < 60]
         if len(recent) >= 5:
             return render_template("login.html", error="Too many attempts. Wait a minute.", enabled=auth_enabled()), 429

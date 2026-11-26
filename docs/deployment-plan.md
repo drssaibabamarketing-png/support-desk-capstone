@@ -51,7 +51,8 @@ Redeploy the previous commit on Render; no migrations or stored data exist.
 |---|---|
 | `REVIEWER_PASSWORD` | Turns on reviewer-only actions. `render.yaml` generates one; read it in the Render dashboard (Environment) and share it only with reviewers. |
 | `SECRET_KEY` | Signs the session cookie (generated on Render). |
-| `COOKIE_SECURE` | `1` on HTTPS. |
+| `COOKIE_SECURE` | `1` on HTTPS (also turns on HSTS). |
+| `PROXY_HOPS` | Number of trusted reverse proxies (`1` on Render, `0` locally/Docker). The login rate limit uses the address the trusted proxy appended, never a raw `X-Forwarded-For` header. |
 | `MCP_TRANSPORT` | `stdio` routes approved writes through `mcp_server.py` (needs `requirements-mcp.txt`). |
 | `APPROVAL_SECRET` | Key for MCP approval receipts (otherwise generated into the output folder). |
 | `DESK_DB` | SQLite journal path (default `logs/state.db`). |

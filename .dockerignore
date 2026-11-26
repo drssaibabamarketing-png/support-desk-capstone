@@ -5,3 +5,18 @@ logs
 outputs/evals/runtime
 docs/screenshots
 .env
+# secrets and runtime state must never be baked into an image (the signing key would make receipts forgeable)
+outputs/.approval_key
+outputs/receipts
+outputs/audit_log.jsonl
+outputs/support_log.*
+outputs/support_reply_draft.*
+outputs/weekly_log.*
+outputs/weekly_pulse_draft.*
+outputs/weekly_job_result.json
+data_state
+*.db
+*.used
+*.expired
+.venv
+venv
