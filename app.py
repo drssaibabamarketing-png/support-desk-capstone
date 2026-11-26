@@ -234,7 +234,7 @@ def refine(tid):
     t, m = _need(tid)
     if m["status"] != "pending":
         abort(400, "ticket already decided")
-    res = SVC.desk.refine(tid, (request.form.get("instruction") or "")[:500])
+    res = SVC.refine(tid, (request.form.get("instruction") or "")[:500])
     return redirect(url_for("ticket", tid=tid, msg=None if res.get("ok") else res.get("error")))
 
 

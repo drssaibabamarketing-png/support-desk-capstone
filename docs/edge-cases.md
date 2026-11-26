@@ -39,6 +39,8 @@ Status: **tested** = covered by an eval or unit test; **checked** = exercised by
 | Approving the doc action does not create the email | Separate gate | tested |
 | Re-running the weekly loop with pending actions | A different run's pending actions become `superseded`; identical content keeps its pending action and gate | tested |
 | Re-running the weekly loop after an approval (identical content) | The approved action stays approved and is not offered again (no duplicate doc entry, no canonical version bump); a rejected one is re-offered under a new id, the rejection kept | tested |
+| Restart after refining or re-drafting a ticket | Refinements (redacted note) and re-drafts are journalled and replayed in order, so a later edit restores against the right citation | tested |
+| Restart after the stale-fact date, with an accepted edit on a time-sensitive fact | The edit's wording is restored, but the ticket stays flagged (`STALE_FACT`) and cannot be approved until the source is re-checked; a live edit of a stale fact is still refused; any other replay failure is logged as `edit_not_restored` | tested |
 | A write fails during approval | The ticket/action stays pending, nothing is journalled; approving again performs only the missing write | tested |
 | Edit that breaks the one-link rule | Refused with the reviewer's failure codes | checked |
 | Two browsers act at once | `RLock` serialises mutations | checked |

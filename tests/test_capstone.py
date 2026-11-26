@@ -276,6 +276,70 @@ class ApprovalIntegrity(unittest.TestCase):
         self.assertEqual(s.canonical[run["explainer"]["fee"]]["version"], 1)
 
 
+class Persistence(unittest.TestCase):
+    """D5: refinements and re-drafts were not journalled; replayed edits were silently dropped after the stale date."""
+
+    def setUp(self):
+        os.environ["DESK_DB"] = str(Path(tempfile.mkdtemp()) / "p.db")
+
+    def tearDown(self):
+        os.environ.pop("DESK_DB", None)
+        os.environ.pop("TODAY_OVERRIDE", None)
+
+    @staticmethod
+    def _restarted():
+        b = Service(); b.seed(); b.run_weekly(); b.restore()
+        return b
+
+    @staticmethod
+    def _by_q(s, q):
+        return next(t for t in s.order if s.meta[t]["q_id"] == q)
+
+    def test_refinement_survives_a_restart(self):
+        a = Service(); a.seed()
+        tid = self._by_q(a, "Q-004")
+        self.assertTrue(a.refine(tid, "make it shorter")["ok"])
+        b = self._restarted()
+        tb = b.desk.tickets[self._by_q(b, "Q-004")]
+        self.assertEqual(tb["refinements_used"], 1)
+        self.assertEqual(tb["draft"]["reply"]["full_text"], a.desk.tickets[tid]["draft"]["reply"]["full_text"])
+
+    def test_redraft_then_edit_survive_a_restart(self):
+        a = Service(); a.seed(); run = a.run_weekly()
+        a.decide_action(run["action_ids"][0], True)                  # canonical explainer approved
+        tid = self._by_q(a, "Q-020")
+        self.assertTrue(a.redraft_with_canonical(tid)["canonical"])
+        body = a.desk.tickets[tid]["draft"]["reply"]["body"].replace(
+            "If this doesn't resolve your concern, reply here and our team will take a look.", "").strip()
+        self.assertTrue(a.edit_draft(tid, body)["ok"])
+        b = self._restarted()
+        tb = b.desk.tickets[self._by_q(b, "Q-020")]
+        self.assertTrue(tb["outputs"]["facts"].get("canonical"))     # the re-draft was replayed first ...
+        self.assertEqual(tb["draft"]["reply"]["body"], body)         # ... so the edit (canonical citation) restores
+
+    def test_edit_restored_after_stale_date_keeps_wording_and_stays_blocked(self):
+        a = Service(); a.seed()
+        tid = self._by_q(a, "Q-005")                                  # minimum SIP: a time-sensitive fact
+        body = a.desk.tickets[tid]["draft"]["reply"]["body"].replace(
+            "If this doesn't resolve your concern, reply here and our team will take a look.", "").strip()
+        self.assertTrue(a.edit_draft(tid, body)["ok"])
+        os.environ["TODAY_OVERRIDE"] = "2027-03-01"                   # > 60 days after the 26 Nov 2026 check
+        b = self._restarted()
+        tb, mb = b.desk.tickets[self._by_q(b, "Q-005")], b.meta[self._by_q(b, "Q-005")]
+        self.assertEqual(tb["draft"]["reply"]["body"], body)          # the human's wording is not lost
+        self.assertTrue(mb["edited"])
+        self.assertTrue(tb["send_blocked"])                           # but it cannot be approved while stale
+        self.assertIn("STALE_FACT", [f["code"] for f in tb["review"]["failures"]])
+        self.assertEqual(b.decide_ticket(self._by_q(b, "Q-005"), True).get("status"), 403)
+
+    def test_live_edit_of_a_stale_fact_is_still_refused(self):
+        os.environ["TODAY_OVERRIDE"] = "2027-03-01"
+        a = Service(); a.seed()
+        tid = self._by_q(a, "Q-005")
+        res = a.edit_draft(tid, a.desk.tickets[tid]["draft"]["reply"]["body"])
+        self.assertFalse(res["ok"])                                   # the replay exception never applies to live edits
+
+
 class WeeklyApi(unittest.TestCase):
     def setUp(self):
         import app as A

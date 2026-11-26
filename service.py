@@ -253,13 +253,20 @@ class Service:
             sents, _ = reviewer_mod.split_reply(full)
             cand["reply"].update(body=body, full_text=full, sentences=[{"text": s["text"], "type": "edited"} for s in sents])
             rv = reviewer_mod.review(cand, t["outputs"]["facts"], self.desk.compliance)
-            if not rv["passed"]:
+            # On REPLAY, an edit that was accepted when it was made is re-applied even if the only failure now is
+            # STALE_FACT (time has passed since the source check): the human's wording is kept, and the ticket stays
+            # flagged so it cannot be approved until the source is re-checked. Before this, the edit was silently lost.
+            stale_only = bool(rv["failures"]) and all(f["code"] == "STALE_FACT" for f in rv["failures"])
+            if not rv["passed"] and not (self._replaying and stale_only):
+                if self._replaying:
+                    log_event({"event": "edit_not_restored", "ticket": tid, "q_id": m["q_id"],
+                               "failure_codes": [f["code"] for f in rv["failures"]]})
                 return {"ok": False, "error": "The reviewer rejected the edit: " + "; ".join(f"{f['code']}" for f in rv["failures"])
                         + ". Nothing was changed.", "failures": rv["failures"]}
             t["draft"], t["review"] = cand, rv
-            t["flagged"] = t["send_blocked"] = False
+            t["flagged"] = t["send_blocked"] = not rv["passed"]
             m["edited"], m["edit_count"] = True, m["edit_count"] + 1
-            log_event({"event": "human_edit", "ticket": tid, "q_id": m["q_id"], "reviewer": "pass"})
+            log_event({"event": "human_edit", "ticket": tid, "q_id": m["q_id"], "reviewer": "pass" if rv["passed"] else "STALE_FACT (restored, flagged)"})
             if not self._replaying:
                 self.journal.add("edit", q_id=m["q_id"], body=body)
             return {"ok": True}
@@ -277,7 +284,21 @@ class Service:
             m["edited"] = False
             m["key"], m["label"] = self.topic_of(t)
             self.desk._log(t, "redraft", fired)
+            if not self._replaying:                          # a later edit is reviewed against THIS draft's fact
+                self.journal.add("redraft", q_id=m["q_id"])
             return {"ok": True, "canonical": bool(t["outputs"]["facts"].get("canonical"))}
+
+    def refine(self, tid: str, instruction: str) -> dict:
+        """A reviewer's refinement note for one pending ticket. Journalled (redacted) so a restart keeps it."""
+        with self.lock:
+            m = self.meta[tid]
+            if m["status"] != "pending":
+                return {"ok": False, "error": f"ticket already {m['status']}"}
+            instr = pii.redact(instruction or "")[0]
+            res = self.desk.refine(tid, instr)
+            if res.get("ok") and not self._replaying:
+                self.journal.add("refine", q_id=m["q_id"], instruction=instr)
+            return res
 
     def decide_ticket(self, tid: str, approve: bool) -> dict:
         with self.lock:
@@ -422,7 +443,7 @@ class Service:
 
     def restore(self) -> dict:
         """Replay the journal: live questions, human edits, ticket and weekly decisions, canonical explainers. Writes nothing."""
-        n = {"questions": 0, "edits": 0, "tickets": 0, "actions": 0}
+        n = {"questions": 0, "refinements": 0, "redrafts": 0, "edits": 0, "tickets": 0, "actions": 0}
         with self.lock:
             if self._restored:                                  # idempotent: replaying twice must not duplicate anything
                 return n
@@ -438,6 +459,14 @@ class Service:
                     elif kind == "submit":
                         if self._tid(b["q_id"]) is None:        # never create a second ticket for the same journalled question
                             self.submit_question(b["text"], b["q_id"], b["received_at"]); n["questions"] += 1
+                    elif kind == "refine":
+                        tid = self._tid(b["q_id"])
+                        if tid and self.meta[tid]["status"] == "pending" and self.refine(tid, b["instruction"]).get("ok"):
+                            n["refinements"] += 1
+                    elif kind == "redraft":
+                        tid = self._tid(b["q_id"])
+                        if tid and self.meta[tid]["status"] == "pending" and self.redraft_with_canonical(tid).get("ok"):
+                            n["redrafts"] += 1
                     elif kind == "edit":
                         tid = self._tid(b["q_id"])
                         if tid and self.edit_draft(tid, b["body"]).get("ok"):

@@ -57,7 +57,7 @@ Redeploy the previous commit on Render; no migrations or stored data exist.
 | `APPROVAL_SECRET` | Key for MCP approval receipts (otherwise generated into the output folder). |
 | `DESK_DB` | SQLite journal path (default `logs/state.db`). |
 
-**Persistence.** Human decisions, live questions, uploaded reviews and canonical explainers are journalled in SQLite and replayed at start-up. The database survives a restart only on a persistent disk: Docker (`docker-compose.yml` mounts `./data_state`), a Render paid disk (mount it and set `DESK_DB` and `DESK_OUT` onto it), or any VM. **On Render's free tier the filesystem is ephemeral, so a redeploy or sleep-and-rebuild still starts fresh.**
+**Persistence.** Human decisions (approvals, rejections, refinements, re-drafts, edits), live questions, uploaded reviews and canonical explainers are journalled in SQLite and replayed at start-up. The database survives a restart only on a persistent disk: Docker (`docker-compose.yml` mounts `./data_state`), a Render paid disk (mount it and set `DESK_DB` and `DESK_OUT` onto it), or any VM. **On Render's free tier the filesystem is ephemeral, so a redeploy or sleep-and-rebuild still starts fresh.**
 
 
 ## Hosted architecture (which processes exist)

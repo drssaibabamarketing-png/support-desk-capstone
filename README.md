@@ -86,7 +86,7 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 |---|---|
 | Access | Reviewer login + CSRF + security headers. The live queue, tickets, weekly actions, approvals, audit log and written files are reviewer-only; every change, including adding a question, needs a reviewer. The public sees a read-only demo built from synthetic sample data (`make_demo.py` → `data/demo_snapshot.json`). No password set = live desk closed (fail closed) |
 | MCP | A **real MCP server** (`mcp_server.py`, stdio) that refuses any write without a signed, single-use human-approval receipt |
-| Persistence | SQLite journal replayed at start-up (approvals, edits, live questions, canonical explainers, uploaded reviews) |
+| Persistence | SQLite journal replayed at start-up (approvals, refinements, re-drafts, edits, live questions, canonical explainers, uploaded reviews; text is stored redacted) |
 | Weekly data | Upload a newer reviews CSV on the Weekly page, or `python weekly_job.py newer.csv`; the page says when it is a replay |
 | Voice | Consent notice (the browser may send audio to Google or Microsoft), English / Hindi / Kannada and more, listening / processing / success / error states, transcript review before submission, retry and typed fallback, clarification chips, read-aloud. Tested with a **mocked** recogniser in a real browser engine; **not** tested with a live microphone |
 | Facts | DP charges per sell order; five expense ratios and three source pages re-checked on 26 Nov |
