@@ -6,16 +6,23 @@
 </head><body>
 <div class="band"><div class="wrap"><a class="brand" href="/"><i></i>Support Desk</a>
   <nav class="nav" aria-label="Main">
+    {% if reviewer %}
     <a href="/" {% if request.path=='/' %}aria-current="page"{% endif %}>Overview</a>
     <a href="/queue" {% if request.path=='/queue' %}aria-current="page"{% endif %}>Queue</a>
     <a href="/weekly" {% if request.path.startswith('/weekly') %}aria-current="page"{% endif %}>Weekly pulse</a>
     <a href="/sources" {% if request.path=='/sources' %}aria-current="page"{% endif %}>Sources</a>
     <a href="/approvals" {% if request.path=='/approvals' %}aria-current="page"{% endif %}>Approvals{% if pending_actions %} <span class="badge">{{ pending_actions }}</span>{% endif %}</a>
     <a href="/canonical" {% if request.path=='/canonical' %}aria-current="page"{% endif %}>Canonical explainers</a>
+    <a href="/demo" {% if request.path=='/demo' %}aria-current="page"{% endif %}>Public demo</a>
     <a href="/evals" {% if request.path=='/evals' %}aria-current="page"{% endif %}>Evals</a>
-    {% if auth_on %}{% if reviewer %}<form method="post" action="/logout" class="inl"><button class="linkbtn">Log out</button></form>{% else %}<a href="/login">Reviewer login</a>{% endif %}{% endif %}
+    <form method="post" action="/logout" class="inl"><button class="linkbtn">Log out</button></form>
+    {% else %}
+    <a href="/demo" {% if request.path=='/demo' %}aria-current="page"{% endif %}>Demo (sample data)</a>
+    <a href="/evals" {% if request.path=='/evals' %}aria-current="page"{% endif %}>Evals</a>
+    <a href="/login" {% if request.path=='/login' %}aria-current="page"{% endif %}>Reviewer login</a>
+    {% endif %}
   </nav></div></div>
-{% if auth_on and not reviewer %}<div class="notice"><div class="wrap">Read-only view. You can read everything and submit a question; <a href="/login">log in as a reviewer</a> to edit, approve or reject.</div></div>{% elif not auth_on %}<div class="notice warn"><div class="wrap">Open demo mode: no reviewer password is set, so anyone with this URL can approve actions. Set <code>REVIEWER_PASSWORD</code> before sharing it.</div></div>{% endif %}
+{% if not auth_on %}<div class="notice warn"><div class="wrap">Reviewer access is not configured: <code>REVIEWER_PASSWORD</code> is not set, so the live desk is closed and nothing can be approved. Only the public sample demo is available.</div></div>{% elif not reviewer %}<div class="notice"><div class="wrap">Public view: sample data only. The live queue, tickets, approvals and audit log need a <a href="/login">reviewer login</a>.</div></div>{% endif %}
 {% block body %}{% endblock %}
 <footer class="foot"><div class="wrap">Facts-only support desk for Groww and HDFC Mutual Fund · public sources only · no personal data stored · nothing is written or sent without a human approving that action · <a href="/evals">evaluation results</a></div></footer>
 </body></html>

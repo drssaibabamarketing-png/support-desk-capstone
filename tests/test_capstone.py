@@ -64,8 +64,51 @@ class AccessControl(unittest.TestCase):
         os.environ.pop("REVIEWER_PASSWORD", None)
 
     def _tok(self):
+        # the token comes from /login: since the access change (26 Nov 2026) an anonymous visitor cannot open /queue
         import re
-        return re.search(r'name="csrf_token" value="([^"]+)"', self.c.get("/queue").get_data(as_text=True)).group(1)
+        return re.search(r'name="csrf_token" value="([^"]+)"', self.c.get("/login").get_data(as_text=True)).group(1)
+
+    PROTECTED = ["/queue", "/weekly", "/approvals", "/canonical", "/sources", "/saved"]
+
+    def test_anonymous_visitor_sees_only_the_public_demo(self):
+        tid = self.A.SVC.order[0]
+        for path in self.PROTECTED + [f"/ticket/{tid}"]:
+            r = self.c.get(path)
+            self.assertEqual(r.status_code, 302, path)
+            self.assertIn("/login", r.headers["Location"], path)
+        r = self.c.get("/")
+        self.assertEqual((r.status_code, r.headers["Location"].endswith("/demo")), (302, True))
+        demo = self.c.get("/demo").get_data(as_text=True)
+        self.assertIn("Sample data", demo)
+        for live in [self.A.SVC.order[0], "Audit log (what was actually written)", "audit_log", "receipt_id",
+                     'action="/ticket', 'action="/action', 'action="/submit', "Approve"]:
+            self.assertNotIn(live, demo)                       # no live ticket id, audit content or approval control
+        for path in ("/demo", "/evals", "/login", "/healthz"):
+            self.assertEqual(self.c.get(path).status_code, 200, path)
+        self.assertEqual(self.c.get("/healthz").get_json(), {"ok": True})   # no operational numbers
+
+    def test_anonymous_cannot_submit_or_preview(self):
+        n = len(self.A.SVC.order)
+        tok = self._tok()
+        r = self.c.post("/submit", data={"message": "What is the exit load of HDFC Small Cap Fund?", "csrf_token": tok})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(len(self.A.SVC.order), n)             # the live queue did not change
+        r = self.c.post("/api/preview", json={"text": "exit load small cap"}, headers={"X-CSRF-Token": tok})
+        self.assertEqual(r.status_code, 302)
+
+    def test_without_a_password_nobody_is_a_reviewer(self):
+        tok = self._tok()                                      # taken while a login form still exists
+        os.environ.pop("REVIEWER_PASSWORD")                    # fail closed: there is no open demo mode any more
+        self.assertEqual(self.c.get("/queue").status_code, 302)
+        r = self.c.post("/login", data={"password": "", "csrf_token": tok})
+        self.assertEqual(r.status_code, 401)
+        self.assertEqual(self.c.get("/queue").status_code, 302)
+        self.assertIn("not configured", self.c.get("/login").get_data(as_text=True))
+
+    def test_login_redirect_stays_on_this_site(self):
+        for bad in ("//evil.example", "/\\evil.example", "https://evil.example", "javascript:alert(1)"):
+            self.assertEqual(self.A.safe_next(bad), "/")
+        self.assertEqual(self.A.safe_next("/ticket/ab12"), "/ticket/ab12")
 
     def test_post_needs_csrf_and_login(self):
         tid = next(t for t in self.A.SVC.order if self.A.SVC.meta[t]["status"] == "pending")

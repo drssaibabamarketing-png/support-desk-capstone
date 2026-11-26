@@ -40,8 +40,8 @@ A compliance team worries about five things; each has a control in code.
 
 
 ## Access control and request safety (added 26 Nov 2026)
-- **Reviewer login.** With `REVIEWER_PASSWORD` set, everyone can read and submit a question, but only a logged-in reviewer can edit, approve, reject, re-draft, upload reviews or run the weekly loop. Login uses a constant-time compare, an 8-hour session cookie (HttpOnly, SameSite=Lax, Secure on HTTPS) and a 5-attempts-a-minute limit per address. With no password the app runs in open demo mode and says so in a banner.
+- **Reviewer login (fail closed).** The live desk (overview numbers, queue, tickets, weekly pulse and its actions, approvals, audit log, canonical explainers, sources-by-ticket, written files, the intent-preview API) and every state-changing request, including adding a question, need a logged-in reviewer. Anonymous visitors see only `/demo` (a committed snapshot of synthetic sample data built by `make_demo.py`; refused if it contains anything PII-like), `/evals`, `/login` and `/healthz` (no operational numbers). Login uses a constant-time compare, an 8-hour session cookie (HttpOnly, SameSite=Lax, Secure on HTTPS) and a 5-attempts-a-minute limit per address. With no password nobody is a reviewer: the live desk is closed and a banner says so (there is no open mode in which anyone can approve). The login redirect only follows same-site paths.
 - **CSRF.** Every POST needs a token the server adds to each form (header `X-CSRF-Token` for fetch calls). The token-protected `/api/weekly/run` uses `X-Token` instead.
 - **Headers:** `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 - **Uploads:** 5 MB cap; text is redacted before the file is saved.
-- **Not claimed:** no per-user accounts, no audit of who approved (one shared password), no rate limit on anonymous question submission.
+- **Not claimed:** no per-user accounts, no audit of who approved (one shared password).

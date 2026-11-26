@@ -20,11 +20,14 @@ app.config.update(SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(3
                   SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=bool(os.environ.get("COOKIE_SECURE")),
                   PERMANENT_SESSION_LIFETIME=8 * 3600)
 
-# ---------------------------------------------------------------- access control
-# REVIEWER_PASSWORD set  -> anyone can read and submit a question; only a logged-in reviewer can edit, approve, reject,
-#                           re-draft or run the weekly loop. Not set -> open demo mode (shown in a banner).
-# Every POST (except the token-protected API) needs a CSRF token that the server adds to each form.
-OPEN_ENDPOINTS = {"submit", "login", "logout", "api_weekly_run", "api_preview", "static"}
+# ---------------------------------------------------------------- access control (fail closed)
+# The live desk (queue, tickets, weekly actions, approvals, audit, written files, sources-by-ticket, live numbers) and
+# EVERY state-changing request, including submitting a question, need a logged-in reviewer. Anonymous visitors get only
+# PUBLIC_ENDPOINTS: the read-only sample demo (data/demo_snapshot.json, synthetic data, no operational records), the
+# eval evidence already published in the repository, login and the health check. If REVIEWER_PASSWORD is not set,
+# nobody is a reviewer: the live desk is closed (there is no "open demo mode" in which anyone can approve).
+# Every POST (except the token-protected machine API) needs a CSRF token that the server adds to each form.
+PUBLIC_ENDPOINTS = {"demo", "evals", "login", "logout", "healthz", "static", "api_weekly_run"}
 _FAILS: dict[str, list[float]] = {}
 
 
@@ -33,7 +36,7 @@ def auth_enabled() -> bool:
 
 
 def is_reviewer() -> bool:
-    return (not auth_enabled()) or bool(session.get("reviewer"))
+    return auth_enabled() and bool(session.get("reviewer"))
 
 
 def csrf_token() -> str:
@@ -42,16 +45,28 @@ def csrf_token() -> str:
     return session["csrf"]
 
 
+def safe_next(nxt: str | None) -> str:
+    """Only same-site relative paths (no //host, no /\\host, which browsers treat as //host)."""
+    nxt = nxt or "/"
+    return nxt if nxt.startswith("/") and not nxt.startswith("//") and "\\" not in nxt else "/"
+
+
 @app.before_request
 def guard():
-    if request.method != "POST" or request.endpoint in (None, "api_weekly_run", "static"):
+    ep = request.endpoint
+    if ep is None:
+        return None                                            # unknown URL: Flask answers 404 / 405
+    if request.method == "POST" and ep not in ("api_weekly_run", "static"):
+        sent = request.form.get("csrf_token", "") or request.headers.get("X-CSRF-Token", "")
+        if not sent or not hmac.compare_digest(sent, session.get("csrf", "")):
+            abort(400, "Missing or invalid CSRF token. Reload the page and try again.")
+    if ep in PUBLIC_ENDPOINTS or is_reviewer():
         return None
-    sent = request.form.get("csrf_token", "") or request.headers.get("X-CSRF-Token", "")
-    if not sent or not hmac.compare_digest(sent, session.get("csrf", "")):
-        abort(400, "Missing or invalid CSRF token. Reload the page and try again.")
-    if request.endpoint not in OPEN_ENDPOINTS and not is_reviewer():
-        return redirect(url_for("login", next=request.referrer or "/"))
-    return None
+    if request.method == "GET":
+        if ep == "overview":
+            return redirect(url_for("demo"))                   # the public front page is the sample demo
+        return redirect(url_for("login", next=request.full_path.rstrip("?")))
+    return redirect(url_for("login"))                         # a refused POST changes nothing
 
 
 @app.after_request
@@ -78,8 +93,7 @@ def login():
         pw = os.environ.get("REVIEWER_PASSWORD", "")
         if pw and hmac.compare_digest(request.form.get("password", ""), pw):
             session.clear(); session["reviewer"] = True; session.permanent = True
-            nxt = request.args.get("next") or "/"
-            return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else "/")
+            return redirect(safe_next(request.args.get("next")))
         _FAILS[ip] = recent + [now]
         return render_template("login.html", error="Wrong password.", enabled=auth_enabled()), 401
     return render_template("login.html", error=None, enabled=auth_enabled())
@@ -129,7 +143,18 @@ def _need(tid):
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "tickets": len(SVC.order)}
+    return {"ok": True}                                        # public: no operational numbers
+
+
+DEMO_SNAPSHOT = config.BASE / "data" / "demo_snapshot.json"
+
+
+@app.get("/demo")
+def demo():
+    """Public, read-only sample view. Reads ONLY the committed snapshot built by make_demo.py from synthetic questions and
+    the bundled public-review replay; never the live service, journal, audit log or written files."""
+    snap = json.loads(DEMO_SNAPSHOT.read_text(encoding="utf-8")) if DEMO_SNAPSHOT.exists() else None
+    return render_template("demo.html", snap=snap)
 
 
 # ---------------------------------------------------------------- response loop

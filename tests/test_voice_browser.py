@@ -15,7 +15,7 @@ from pathlib import Path
 
 _TMP = tempfile.mkdtemp()
 os.environ["DESK_OUT"], os.environ["DESK_LOGS"] = _TMP + "/out", _TMP + "/logs"
-os.environ.pop("REVIEWER_PASSWORD", None)
+os.environ["REVIEWER_PASSWORD"] = "voice-test-password"   # the queue is reviewer-only since 26 Nov 2026; pages log in first
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 try:
@@ -47,10 +47,17 @@ class VoiceUI(unittest.TestCase):
     def tearDownClass(cls):
         cls.br.close(); cls.pw.stop(); cls.srv.shutdown()
 
+    def login(self, p):
+        p.goto("http://127.0.0.1:5071/login")
+        p.fill("#password", os.environ["REVIEWER_PASSWORD"])
+        p.click("main form button")
+        p.wait_for_load_state()
+
     def page(self, init=None):
         p = self.br.new_page()
         if init:
             p.add_init_script(init)
+        self.login(p)
         p.goto("http://127.0.0.1:5071/queue")
         return p
 
@@ -116,6 +123,7 @@ class VoiceUI(unittest.TestCase):
 
     def test_read_aloud_button_present_when_speech_synthesis_exists(self):
         p = self.br.new_page()
+        self.login(p)
         p.goto("http://127.0.0.1:5071/ticket/" + self.A.SVC.order[0])
         self.assertTrue(p.is_visible("#speak"))
 

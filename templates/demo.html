@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block title %}Demo (sample data){% endblock %}
+{% block body %}<main class="wrap page">
+<h1>Support Desk: public demo</h1>
+<div class="banner warn" role="note"><b>Sample data, read-only.</b> {{ snap.data_note if snap else 'No demo snapshot has been built.' }}
+ Nothing on this page comes from the live desk, and nothing here can be changed or approved.</div>
+<p class="lede">How it works: a question runs through three agents at once (Facts, Pattern, Compliance), an orchestrator drafts a reply of 3 sentences or fewer around one cited official fact, and a reviewer hard-fails advice, return claims, personal data and uncited claims. A human approves every write. Each week, reviews become themes, a pulse of 250 words or fewer and a fee explainer that support reuses once approved.</p>
+{% if snap %}
+<p class="mute">Snapshot built {{ snap.generated_on }} by <code>{{ snap.generated_by }}</code>.</p>
+
+<h2 class="mt">Sample questions and the drafts the desk produced</h2>
+{% for t in snap.tickets %}<section class="card">
+  <h3>{{ loop.index }}. {{ t.kind }}</h3>
+  <p class="quote" style="color:inherit">{{ t.question }}</p>
+  <p>{% if t.pii_removed %}{% for x in t.pii_removed %}<span class="pill warn">{{ x }} removed before storage</span> {% endfor %}{% endif %}
+    <span class="pill">{{ t.intent }}</span>
+    {% if t.canonical %}<span class="pill ok">canonical explainer reused</span>{% endif %}
+    {% if t.hold %}<span class="pill warn">HOLD</span>{% endif %}
+    <span class="pill {{ 'ok' if t.reviewer_passed else 'bad' }}">reviewer {{ 'passed' if t.reviewer_passed else 'flagged' }}</span></p>
+  <div class="letter">{{ t.reply|reply_html }}</div>
+  {% if t.facts_status != 'covered' %}<p class="mute">Not covered. Searched: {{ t.searched|join('; ') }}</p>{% endif %}
+  <details><summary>Internal routing note (sample)</summary><p class="routing">{{ t.routing_note }}</p>
+    <p class="mute">Agents run: {{ t.agents_fired|join(', ') }} · Pattern: {{ t.pattern.trend }}, {{ t.pattern.similar_count }} similar reviews, theme {{ t.pattern.theme }}</p></details>
+</section>{% endfor %}
+
+{% set w = snap.weekly %}
+<h2 class="mt">Sample weekly pulse ({{ w.window }})</h2>
+<div class="grid2">
+<div>
+  <section class="card"><h2>Pulse <span class="pill {{ 'ok' if w.pulse_words<=250 else 'bad' }}">{{ w.pulse_words }} / 250 words</span></h2>
+    <div class="pulse">{{ w.pulse|md }}</div></section>
+  <section class="card"><h2>Fee explainer <span class="pill ok">{{ w.explainer.bullets|length }} / 6 bullets</span></h2>
+    <ul>{% for b in w.explainer.bullets %}<li>{{ b.text }} <a href="{{ b.source_url }}" target="_blank" rel="noopener">[{{ b.source_n }}]</a></li>{% endfor %}</ul>
+    <p class="mute">{% for s in w.explainer.sources %}[{{ s.n }}] <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a> (checked {{ s.last_checked }}) {% endfor %}<br>Last checked: {{ w.explainer.last_checked }}</p></section>
+</div>
+<div>
+  <section class="card"><h2>Themes</h2><p class="sub">{{ w.n_reviews }} unique substantive review texts in {{ w.window }} (from {{ w.rows_in_export }} rows in the export).</p>
+    <table><tr><th>Theme</th><th>Reviews</th><th>1-2★</th></tr>
+    {% for t in w.themes %}<tr><td>{{ t.label }}{% if t.is_top3 %} <span class="pill ok">top 3</span>{% endif %}</td><td>{{ t.count }} ({{ t.share_pct }}%)</td><td>{{ t.negative_pct }}%</td></tr>{% endfor %}</table></section>
+  <section class="card"><h2>Checks run on this output</h2>
+    {% for n,ok,d in w.checks %}<div class="check"><span class="pill {{ 'ok' if ok else 'bad' }}">{{ 'pass' if ok else 'FAIL' }}</span> {{ n }}</div>{% endfor %}</section>
+  <section class="card"><h2>Topics in the sample questions</h2>
+    <table><tr><th>Topic</th><th>Asked</th></tr>{% for g in snap.sample_question_topics %}<tr><td>{{ g.label }}</td><td>{{ g.count }}</td></tr>{% endfor %}</table></section>
+</div></div>
+{% else %}<p class="mute">Run <code>python make_demo.py</code> to build the sample snapshot.</p>{% endif %}
+</main>{% endblock %}

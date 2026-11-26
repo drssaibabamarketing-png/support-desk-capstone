@@ -58,7 +58,7 @@ More diagrams (weekly sequence, response sequence, approval states) in [docs/arc
 | <img src="docs/screenshots/02-queue.png" alt="Queue"> **Queue:** intent, draft, citation, reviewer flag | <img src="docs/screenshots/08-sources.png" alt="Sources"> **Sources:** every link with its last-checked date |
 
 | <img src="docs/screenshots/11-voice-clarify.png" alt="Voice and clarification"> **Voice:** language, confirmation, intent preview, clarification chips | <img src="docs/screenshots/12-weekly-upload.png" alt="Weekly data source"> **Weekly data:** states it is a replay; upload a newer CSV |
-| <img src="docs/screenshots/10-login.png" alt="Reviewer login"> **Reviewer login:** read-only for everyone else | |
+| <img src="docs/screenshots/10-login.png" alt="Reviewer login"> **Reviewer login:** the live desk is reviewer-only; everyone else sees the public sample demo (`/demo`) | |
 
 Also: Overview (above), Evals, Written files. UI guide and a 3-minute demo script: [docs/ui-guide.md](docs/ui-guide.md).
 
@@ -72,7 +72,8 @@ python make_samples.py                # regenerates outputs/samples/*
 python mcp_server.py                  # the MCP server (stdio); normally started by an MCP client
 python tools/mcp_demo.py              # discovery + refused / allowed / replayed calls over the real protocol
 python tools/scan_repo.py             # pre-submission scan for PII, secrets and stray generated files
-REVIEWER_PASSWORD=choose-one python app.py   # reviewer-only actions; without it the app is in open demo mode
+REVIEWER_PASSWORD=choose-one python app.py   # the live desk needs it; without it only the public sample demo (/demo) is available
+python make_demo.py                   # rebuilds data/demo_snapshot.json, the only data the public demo shows
 python weekly_job.py                  # the scheduled, headless weekly run
 docker compose up --build             # optional
 ```
@@ -83,7 +84,7 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 ## What was added after an independent review (26 Nov)
 | Area | Now |
 |---|---|
-| Access | Reviewer login + CSRF + security headers; everyone else is read-only |
+| Access | Reviewer login + CSRF + security headers. The live queue, tickets, weekly actions, approvals, audit log and written files are reviewer-only; every change, including adding a question, needs a reviewer. The public sees a read-only demo built from synthetic sample data (`make_demo.py` → `data/demo_snapshot.json`). No password set = live desk closed (fail closed) |
 | MCP | A **real MCP server** (`mcp_server.py`, stdio) that refuses any write without a signed, single-use human-approval receipt |
 | Persistence | SQLite journal replayed at start-up (approvals, edits, live questions, canonical explainers, uploaded reviews) |
 | Weekly data | Upload a newer reviews CSV on the Weekly page, or `python weekly_job.py newer.csv`; the page says when it is a replay |
@@ -185,7 +186,7 @@ Dockerfile docker-compose.yml render.yaml Procfile n8n-workflow.json .github/wor
 - **Reviews:** 8 weeks only; clusters are unsupervised and noisy, named by a lexicon. The pulse shows the top 3 by volume, so the small, very negative *Customer support & trust* theme (39 reviews, 87% rated 1–2★) is on the Weekly page but not in the pulse's top 3. One quote (R999) is a generic positive review. "366 reviews" means unique substantive texts (1,067 records in the window, 630 distinct, 366 with four or more words).
 - **The weekly loop replays the bundled export** unless a newer CSV is uploaded. The scheduled GitHub Action therefore repeats the same window until a newer file is committed or uploaded.
 - **The reviewer checks support by words and word order, not by meaning.** A sentence that preserves the fact's phrasing but is wrong for another reason is outside what it can see. Human edits get the same check and a harmless rewording may be refused.
-- **Access:** one shared reviewer password; no per-user accounts or per-approver audit; anonymous question submission is unlimited.
+- **Access:** one shared reviewer password; no per-user accounts or per-approver audit. Questions can only be added by a logged-in reviewer (customers do not submit directly).
 - **Persistence works only on a persistent disk** (Docker volume, Render paid disk). On Render's free tier the filesystem is ephemeral, so a redeploy starts fresh.
 - **MCP:** a real server and a real protocol, but the tool bodies write local files and an unsent `.eml`; no Google Docs or Gmail connector is attached.
 - **The default build is deterministic** (retrieval, rules, templates). The optional Groq path is off unless a key is set and is untested.

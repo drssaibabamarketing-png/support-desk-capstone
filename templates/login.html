@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Reviewer login{% endblock %}
 {% block body %}<main class="wrap narrow"><h1>Reviewer login</h1>
-{% if not enabled %}<p class="mute">No reviewer password is set on this server (open demo mode), so no login is needed.</p>{% else %}
-<p class="mute">Reviewers can edit drafts, approve or reject, re-draft tickets and run the weekly loop. Everyone else has a read-only view.</p>
+{% if not enabled %}<p class="mute">Reviewer access is not configured on this server (<code>REVIEWER_PASSWORD</code> is not set), so nobody can log in, edit or approve. The <a href="/demo">public demo</a> shows sample data.</p>{% else %}
+<p class="mute">Reviewers can see the live queue and tickets, add questions, edit drafts, approve or reject, re-draft tickets and run the weekly loop. Everyone else sees only the <a href="/demo">public demo</a> with sample data.</p>
 {% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
 <form method="post" class="card stack"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
 <button class="btn">Log in</button></form>{% endif %}</main>{% endblock %}

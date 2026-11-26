@@ -1,0 +1,362 @@
+{
+ "generated_by": "make_demo.py",
+ "generated_on": "2026-11-26",
+ "data_note": "Sample data only: synthetic questions written for this demo and a replay of the bundled, redacted public Play Store review export. No live queue, ticket, approval, audit or written-file data.",
+ "weekly": {
+  "window": "2026-08-22 to 2026-08-29",
+  "n_reviews": 366,
+  "rows_in_export": 8629,
+  "pulse": "**Weekly Product Pulse | 2026-08-22 to 2026-08-29** (366 reviews, avg 3.24/5)\n\n**Top themes**\n- App performance & bugs: 191 reviews (52.2%), 53.9% rated 1-2★\n- Mutual funds & SIP: 55 reviews (15.0%), 3.6% rated 1-2★\n- Ease of use & positive experience: 44 reviews (12.0%), 6.8% rated 1-2★\n\n**What users say**\n- \"The new update is really bad. Every time you open the chart then a scalper option appears below instead of an earlier touch screen panel.\" (R50, 1★)\n- \"groww app good experience all funds excellent app thank you 💓 grow app\" (R999, 5★)\n- \"Easy To Use....Very Helpfull App...Thanks Groww App....For our Growth.....\" (R708, 5★)\n\n**Key observation**\n21 reviews (5.7%) mention brokerage & trade charges; 16 are 1-2★ and 11 use confusion words (hidden, extra, unclear, comparisons with other apps).\n\n**Support desk signal**\n- \"Groww brokerage and charges\" asked 8 times this week.\n- \"HDFC scheme exit load\" asked 5 times this week.\n\n**Action ideas**\n1. Show a full charge breakup (brokerage, taxes, statutory charges) before the order is confirmed.\n2. Add a \"why was I charged?\" link beside every ledger and contract-note line.\n3. Give support one approved fee explainer and track charge-related questions weekly.",
+  "pulse_words": 198,
+  "themes": [
+   {
+    "label": "App performance & bugs",
+    "count": 191,
+    "share_pct": 52.2,
+    "negative_pct": 53.9,
+    "is_top3": true
+   },
+   {
+    "label": "Mutual funds & SIP",
+    "count": 55,
+    "share_pct": 15.0,
+    "negative_pct": 3.6,
+    "is_top3": true
+   },
+   {
+    "label": "Ease of use & positive experience",
+    "count": 44,
+    "share_pct": 12.0,
+    "negative_pct": 6.8,
+    "is_top3": true
+   },
+   {
+    "label": "Customer support & trust",
+    "count": 39,
+    "share_pct": 10.7,
+    "negative_pct": 87.2,
+    "is_top3": false
+   },
+   {
+    "label": "Pricing & charges confusion",
+    "count": 37,
+    "share_pct": 10.1,
+    "negative_pct": 5.4,
+    "is_top3": false
+   }
+  ],
+  "fee": {
+   "fee": "Brokerage & trade charges",
+   "mentions": 21,
+   "negative_mentions": 16,
+   "pct_of_reviews": 5.7
+  },
+  "explainer": {
+   "fee": "Brokerage & trade charges",
+   "bullets": [
+    {
+     "text": "Brokerage is the fee the broker charges for each executed equity order; Groww publishes its current rates on its pricing page.",
+     "source_n": 1,
+     "source_url": "https://groww.in/pricing"
+    },
+    {
+     "text": "Brokerage is not the only cost: statutory charges such as STT, exchange transaction charges, GST, SEBI turnover fees and stamp duty are added by regulation and are not set by the broker.",
+     "source_n": 1,
+     "source_url": "https://groww.in/pricing"
+    },
+    {
+     "text": "Selling delivery shares also attracts depository (DP) charges, applied per sell order, not per stock.",
+     "source_n": 1,
+     "source_url": "https://groww.in/pricing"
+    },
+    {
+     "text": "Charges apply per executed order, so splitting one trade into several orders can increase the total fee.",
+     "source_n": 1,
+     "source_url": "https://groww.in/pricing"
+    },
+    {
+     "text": "Groww's Help Centre lists the charges that appear in a delivery trade report: brokerage, DP charges, stamp duty, exchange transaction charges, SEBI turnover charges, the investor protection fund charge, STT and GST.",
+     "source_n": 2,
+     "source_url": "https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report"
+    },
+    {
+     "text": "Groww's delivery brokerage is the lower of a flat fee or a percentage of the order value, subject to a minimum; the exact figures are on the pricing page.",
+     "source_n": 1,
+     "source_url": "https://groww.in/pricing"
+    }
+   ],
+   "sources": [
+    {
+     "n": 1,
+     "name": "Groww pricing and charges",
+     "url": "https://groww.in/pricing",
+     "last_checked": "26 Nov 2026"
+    },
+    {
+     "n": 2,
+     "name": "Groww Help Centre: charges mentioned in the report",
+     "url": "https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report",
+     "last_checked": "26 Nov 2026"
+    }
+   ],
+   "last_checked": "26 Nov 2026"
+  },
+  "checks": [
+   [
+    "<= 5 themes",
+    true,
+    "5 themes"
+   ],
+   [
+    "every theme has review ids and a stated window",
+    true,
+    "2026-08-22 to 2026-08-29"
+   ],
+   [
+    "3 quotes, each with a review id",
+    true,
+    "3 quotes"
+   ],
+   [
+    "pulse <= 250 words",
+    true,
+    "198 words"
+   ],
+   [
+    "3 action ideas",
+    true,
+    "numbered"
+   ],
+   [
+    "explainer <= 6 bullets",
+    true,
+    "6 bullets"
+   ],
+   [
+    "explainer has 2 official links",
+    true,
+    "https://groww.in/pricing, https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report"
+   ],
+   [
+    "explainer has 'last checked'",
+    true,
+    "26 Nov 2026"
+   ],
+   [
+    "no advice / return claim / PII in pulse or explainer",
+    true,
+    "scanned"
+   ]
+  ]
+ },
+ "sample_question_topics": [
+  {
+   "label": "Groww brokerage and charges",
+   "count": 9
+  },
+  {
+   "label": "HDFC scheme exit load",
+   "count": 6
+  },
+  {
+   "label": "Not covered: App performance & bugs",
+   "count": 4
+  },
+  {
+   "label": "Groww DP (depository) charges",
+   "count": 4
+  },
+  {
+   "label": "HDFC scheme minimum SIP",
+   "count": 2
+  },
+  {
+   "label": "HDFC scheme expense ratio",
+   "count": 2
+  },
+  {
+   "label": "ELSS lock-in",
+   "count": 2
+  },
+  {
+   "label": "Not covered: Mutual funds & SIP",
+   "count": 2
+  },
+  {
+   "label": "KYC",
+   "count": 1
+  },
+  {
+   "label": "Account statement",
+   "count": 1
+  },
+  {
+   "label": "Benchmark",
+   "count": 1
+  },
+  {
+   "label": "Capital gains statement",
+   "count": 1
+  },
+  {
+   "label": "Not covered: Withdrawals, KYC & account issues",
+   "count": 1
+  },
+  {
+   "label": "Not covered: Customer support & trust",
+   "count": 1
+  },
+  {
+   "label": "Riskometer",
+   "count": 1
+  }
+ ],
+ "tickets": [
+  {
+   "kind": "Fee question, answered from the approved canonical explainer",
+   "question": "Why was brokerage deducted again when I sold my shares?",
+   "intent": "Fee question (canonical explainer reused)",
+   "pii_removed": [],
+   "facts_status": "covered",
+   "searched": [],
+   "canonical": true,
+   "reply": "Brokerage is the fee the broker charges for each executed equity order; Groww publishes its current rates on its pricing page ([source](https://groww.in/pricing)). If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 26 Nov 2026",
+   "citation_url": "https://groww.in/pricing",
+   "last_checked": "26 Nov 2026",
+   "routing_note": "Route to: Billing & Charges Support. Priority: P3 (Low). Facts clean and no escalation signal. Facts: REUSED canonical explainer 'Brokerage & trade charges' v1 (approved 2026-11-26), not drafted fresh; source https://groww.in/pricing. Pattern: one-off - 2 similar reviews in the last 28 days (0 in the last 14 days vs 2 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Pricing & charges confusion'. Compliance: clean. Action: Send after approval; ticket can close once the customer confirms.",
+   "hold": false,
+   "reviewer_passed": true,
+   "failure_codes": [],
+   "pattern": {
+    "trend": "one-off",
+    "similar_count": 2,
+    "theme": "Pricing & charges confusion"
+   },
+   "agents_fired": [
+    "facts",
+    "pattern",
+    "compliance",
+    "orchestrator",
+    "reviewer"
+   ]
+  },
+  {
+   "kind": "Scheme fact from the official corpus",
+   "question": "What is the exit load of HDFC Small Cap Fund?",
+   "intent": "Factual question (corpus)",
+   "pii_removed": [],
+   "facts_status": "covered",
+   "searched": [],
+   "canonical": false,
+   "reply": "For the HDFC Small Cap Fund, exit load is 1% if redeemed within 1 year ([source](https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct)). If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 26 Nov 2026",
+   "citation_url": "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct",
+   "last_checked": "26 Nov 2026",
+   "routing_note": "Route to: Mutual Funds Desk. Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct. Pattern: one-off - 0 similar reviews in the last 28 days (0 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'App performance & bugs'. Compliance: clean. Action: Send after approval; ticket can close once the customer confirms.",
+   "hold": false,
+   "reviewer_passed": true,
+   "failure_codes": [],
+   "pattern": {
+    "trend": "one-off",
+    "similar_count": 0,
+    "theme": "App performance & bugs"
+   },
+   "agents_fired": [
+    "facts",
+    "pattern",
+    "compliance",
+    "orchestrator",
+    "reviewer"
+   ]
+  },
+  {
+   "kind": "Question the official sources cannot answer",
+   "question": "Do HDFC funds invest in cryptocurrency?",
+   "intent": "Not covered (routed to a team)",
+   "pii_removed": [],
+   "facts_status": "not_covered",
+   "searched": [
+    "HDFC scheme page",
+    "topics tried: no recognised scheme/fee topic",
+    "schemes detected: none"
+   ],
+   "canonical": false,
+   "reply": "I couldn't find this in our official sources, so I've passed it to our team to look into. If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 22 Oct 2026",
+   "citation_url": null,
+   "last_checked": "22 Oct 2026",
+   "routing_note": "Route to: Mutual Funds Desk. Priority: P3 (Low). No cited fact available. Facts: NOT covered by the corpus (searched: HDFC scheme page; topics tried: no recognised scheme/fee topic; schemes detected: none). Pattern: one-off - 1 similar reviews in the last 28 days (1 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Mutual funds & SIP'. Compliance: clean. Action: OPEN: needs a human answer (corpus does not cover this).",
+   "hold": false,
+   "reviewer_passed": true,
+   "failure_codes": [],
+   "pattern": {
+    "trend": "one-off",
+    "similar_count": 1,
+    "theme": "Mutual funds & SIP"
+   },
+   "agents_fired": [
+    "facts",
+    "pattern",
+    "compliance",
+    "orchestrator",
+    "reviewer"
+   ]
+  },
+  {
+   "kind": "Advice request (refused)",
+   "question": "Should I redeem my HDFC Small Cap Fund units?",
+   "intent": "Advice / returns request (refused)",
+   "pii_removed": [],
+   "facts_status": "covered",
+   "searched": [],
+   "canonical": false,
+   "reply": "I can't advise on whether to invest or redeem, or on what returns to expect; I can only share facts from official sources. For the HDFC Small Cap Fund, exit load is 1% if redeemed within 1 year ([source](https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct)).\n\nLast checked: 26 Nov 2026",
+   "citation_url": "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct",
+   "last_checked": "26 Nov 2026",
+   "routing_note": "Route to: Mutual Funds Desk (cc: Compliance). Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct. Pattern: one-off - 1 similar reviews in the last 28 days (0 in the last 14 days vs 1 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Mutual funds & SIP'. Compliance: customer asked for advice/returns: refusal template used. Action: Send after approval; ticket can close once the customer confirms.",
+   "hold": false,
+   "reviewer_passed": true,
+   "failure_codes": [],
+   "pattern": {
+    "trend": "one-off",
+    "similar_count": 1,
+    "theme": "Mutual funds & SIP"
+   },
+   "agents_fired": [
+    "facts",
+    "pattern",
+    "compliance",
+    "orchestrator",
+    "reviewer"
+   ]
+  },
+  {
+   "kind": "Message containing a PAN (removed before storage)",
+   "question": "My PAN is [PAN REDACTED]. Why is a DP charge applied when I sell?",
+   "intent": "Factual question (corpus)",
+   "pii_removed": [
+    "PAN"
+   ],
+   "facts_status": "covered",
+   "searched": [],
+   "canonical": false,
+   "reply": "Selling delivery shares also attracts depository (DP) charges, applied per sell order, not per stock ([source](https://groww.in/pricing)). For your security, please don't share PAN, phone numbers or OTPs here; we've removed them from your message.\n\nLast checked: 26 Nov 2026",
+   "citation_url": "https://groww.in/pricing",
+   "last_checked": "26 Nov 2026",
+   "routing_note": "Route to: Billing & Charges Support. Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://groww.in/pricing. Pattern: one-off - 0 similar reviews in the last 28 days (0 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Pricing & charges confusion'. Compliance: PII removed before storage (PAN). Action: Send after approval; ticket can close once the customer confirms.",
+   "hold": false,
+   "reviewer_passed": true,
+   "failure_codes": [],
+   "pattern": {
+    "trend": "one-off",
+    "similar_count": 0,
+    "theme": "Pricing & charges confusion"
+   },
+   "agents_fired": [
+    "facts",
+    "pattern",
+    "compliance",
+    "orchestrator",
+    "reviewer"
+   ]
+  }
+ ]
+}

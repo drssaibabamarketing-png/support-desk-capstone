@@ -27,6 +27,9 @@ if RT.exists():
 (RT / "logs").mkdir(parents=True)
 os.environ["DESK_OUT"] = str(RT / "out")
 os.environ["DESK_LOGS"] = str(RT / "logs")
+# The live desk is reviewer-only (26 Nov 2026 access change): the web checks below log in as a reviewer first.
+os.environ["REVIEWER_PASSWORD"] = "eval-reviewer-password"
+os.environ.pop("WEEKLY_TOKEN", None)
 sys.path.insert(0, str(ROOT))
 
 import contextlib                                      # noqa: E402
@@ -48,6 +51,15 @@ PAN, PHONE, ACCT, AADHAAR, OTP = "ABCDE" + "1234F", "98765" + "43210", "12345678
 SENSITIVE = [PAN, PHONE, ACCT, AADHAAR, OTP]
 
 R: dict[str, list] = {}
+
+
+def reviewer_client(A):
+    """A Flask test client logged in as the reviewer (CSRF token taken from the login form)."""
+    cl = A.app.test_client()
+    tok = re.search(r'name="csrf_token" value="([^"]+)"', cl.get("/login").get_data(as_text=True)).group(1)
+    r = cl.post("/login", data={"password": os.environ["REVIEWER_PASSWORD"], "csrf_token": tok})
+    assert r.status_code == 302, "reviewer login failed in the eval harness"
+    return cl
 
 
 def fresh(tag):
@@ -753,7 +765,7 @@ def privacy_pathways():
             shutil.rmtree(td, ignore_errors=True)
         # preview API (typed or spoken text) stores and logs nothing
         import app as A
-        cl = A.app.test_client()
+        cl = reviewer_client(A)
         import re as _re
         tok = _re.search(r'name="csrf_token" value="([^"]+)"', cl.get("/queue").get_data(as_text=True)).group(1)
         n0 = len(A.SVC.order)
@@ -832,12 +844,33 @@ def requirements():
     check(S, "D. no write happened before approval (only the one approved weekly action wrote)", len(list(config.OUT.glob("support_log*"))) == 0 and (config.OUT / "weekly_log.md").exists() and not (config.OUT / "weekly_pulse_draft.eml").exists(), "")
     # E interface
     import app as A
-    cl = A.app.test_client()
+    cl = reviewer_client(A)
     pages = {"/queue": "Question queue", "/weekly": "Weekly pulse", "/sources": "", "/approvals": "", "/canonical": "", "/": "", "/evals": "", "/login": ""}
     codes = {p: cl.get(p).status_code for p in pages}
     check(S, "E. queue, weekly pulse, sources, approvals, canonical explainers, overview, evals and login pages all load", all(v == 200 for v in codes.values()), str(codes))
     q = cl.get("/queue").get_data(as_text=True)
     check(S, "E. the queue page has the voice controls (mic, language, confirmation, consent)", all(k in q for k in ('id="mic"', 'id="lang"', 'id="confirm"', 'id="consent"')), "")
+    # access: the live desk is reviewer-only; anonymous visitors get the sanitised public demo
+    anon = A.app.test_client()
+    tid0 = A.SVC.order[0]
+    prot = ["/", "/queue", f"/ticket/{tid0}", "/weekly", "/approvals", "/canonical", "/sources", "/saved"]
+    acodes = {p: (anon.get(p).status_code, anon.get(p).headers.get("Location", "")) for p in prot}
+    check(S, "E. an anonymous visitor cannot open the live queue, tickets, weekly actions, approvals, sources or written files (redirected to login or the demo)",
+          all(c == 302 and ("/login" in loc or loc.endswith("/demo")) for c, loc in acodes.values()), str({p: c for p, (c, _) in acodes.items()}))
+    demo = anon.get("/demo").get_data(as_text=True)
+    live_marks = [tid0, "Audit log (what was actually written)", "audit_log", "receipt_id", 'action="/ticket', 'action="/action', 'action="/submit']
+    check(S, "E. the public demo loads and shows sample data only (no live ticket id, audit content or approval/submit control)",
+          anon.get("/demo").status_code == 200 and "Sample data" in demo and not [m for m in live_marks if m in demo], "")
+    atok = re.search(r'name="csrf_token" value="([^"]+)"', anon.get("/login").get_data(as_text=True)).group(1)
+    pend = next(t for t in A.SVC.order if A.SVC.meta[t]["status"] == "pending")
+    before = A.SVC.snapshot(); n_q = len(A.SVC.order)
+    rs = [anon.post("/submit", data={"message": "What is the exit load of HDFC Small Cap Fund?", "csrf_token": atok}),
+          anon.post(f"/ticket/{pend}/decide", data={"decision": "approve", "csrf_token": atok}),
+          anon.post("/api/preview", json={"text": "exit load"}, headers={"X-CSRF-Token": atok}),
+          anon.post("/api/weekly/run")]
+    check(S, "E. without a reviewer session, submitting, approving, the preview API and the weekly API are refused and change nothing",
+          [r.status_code for r in rs] == [302, 302, 302, 403] and len(A.SVC.order) == n_q and not diff(before, A.SVC.snapshot()),
+          str([r.status_code for r in rs]))
 
 
 def main():
