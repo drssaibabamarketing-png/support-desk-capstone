@@ -128,5 +128,102 @@ class Regressions(unittest.TestCase):
             self.assertEqual((len(ok), len(refused)), (1, 7))
 
 
+class ApprovalIntegrity(unittest.TestCase):
+    """D2 (a re-run reopened approved actions), D4 (decisions were not atomic with their writes), open weekly API."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.s = Service(); cls.s.seed()
+
+    def _entries(self, run_id):
+        p = config.OUT / "weekly_log.md"
+        return p.read_text(encoding="utf-8").count(f"(run {run_id},") if p.exists() else 0
+
+    def test_rerun_never_reopens_an_approved_action(self):
+        s = self.s
+        run = s.run_weekly(); doc, email = run["action_ids"]
+        self.assertTrue(s.decide_action(doc, True)["ok"])
+        fee = run["explainer"]["fee"]; v = s.canonical[fee]["version"]
+        gate = s.actions[email]["gate"]
+        n = self._entries(run["run_id"])                       # other tests share the output folder: measure the change
+        self.assertGreaterEqual(n, 1)
+        run2 = s.run_weekly()                                   # identical content
+        self.assertEqual(run2["run_id"], run["run_id"])
+        self.assertEqual(run2["action_ids"], [doc, email])      # same actions, not fresh ones
+        self.assertEqual(s.actions[doc]["status"], "approved")
+        self.assertIs(s.actions[email]["gate"], gate)           # the pending one keeps its gate
+        self.assertFalse(s.decide_action(doc, True)["ok"])
+        self.assertEqual(self._entries(run["run_id"]), n)       # no duplicate doc entry from the re-run
+        self.assertEqual(s.canonical[fee]["version"], v)        # no spurious version bump
+
+    def test_rejected_action_is_reoffered_under_a_new_id_and_history_is_kept(self):
+        s = self.s
+        run = s.run_weekly(); email = run["action_ids"][1]
+        self.assertTrue(s.decide_action(email, False)["ok"])
+        run2 = s.run_weekly()
+        e2 = run2["action_ids"][1]
+        self.assertNotEqual(e2, email)
+        self.assertEqual(s.actions[email]["status"], "rejected")   # the decision is not overwritten
+        self.assertEqual(s.actions[e2]["status"], "pending")
+
+    def test_failed_ticket_write_stays_pending_and_retry_does_not_duplicate(self):
+        s = self.s
+        tid = next(t for t in s.order if s.meta[t]["status"] == "pending" and not s.desk.tickets[t]["send_blocked"])
+        real, calls = mcp._IMPL["create_email_draft"], []
+
+        def flaky(a):
+            calls.append(1)
+            if len(calls) == 1:
+                raise OSError("disk full")
+            return real(a)
+        mcp._IMPL["create_email_draft"] = flaky
+        try:
+            rows0 = len(s.journal.events())
+            res = s.decide_ticket(tid, True)
+            self.assertFalse(res["ok"])
+            self.assertEqual(s.meta[tid]["status"], "pending")
+            self.assertEqual(s.meta[tid]["gate"].status, "pending")
+            self.assertEqual(len(s.journal.events()), rows0)          # nothing journalled for a failed decision
+            self.assertTrue(s.decide_ticket(tid, True)["ok"])         # retry
+        finally:
+            mcp._IMPL["create_email_draft"] = real
+        self.assertEqual(s.meta[tid]["status"], "approved")
+        log = (config.OUT / "support_log.md").read_text(encoding="utf-8")
+        self.assertEqual(log.count(f"## Ticket {s.meta[tid]['q_id']}/{tid} "), 1)   # record written once, not twice
+
+    def test_failed_weekly_write_stays_pending_without_canonical(self):
+        s = Service(); s.seed()
+        run = s.run_weekly(); doc = run["action_ids"][0]
+        real = mcp._IMPL["append_weekly_record"]
+        mcp._IMPL["append_weekly_record"] = lambda a: (_ for _ in ()).throw(OSError("disk full"))
+        try:
+            self.assertFalse(s.decide_action(doc, True)["ok"])
+        finally:
+            mcp._IMPL["append_weekly_record"] = real
+        self.assertEqual(s.actions[doc]["status"], "pending")
+        self.assertEqual(s.canonical, {})
+        self.assertTrue(s.decide_action(doc, True)["ok"])
+        self.assertEqual(s.canonical[run["explainer"]["fee"]]["version"], 1)
+
+
+class WeeklyApi(unittest.TestCase):
+    def setUp(self):
+        import app as A
+        self.A, self.c = A, A.app.test_client()
+
+    def tearDown(self):
+        os.environ.pop("WEEKLY_TOKEN", None)
+
+    def test_disabled_without_a_configured_token(self):
+        os.environ.pop("WEEKLY_TOKEN", None)
+        self.assertEqual(self.c.post("/api/weekly/run").status_code, 403)
+
+    def test_requires_the_right_token(self):
+        os.environ["WEEKLY_TOKEN"] = "tok-123"
+        self.assertEqual(self.c.post("/api/weekly/run").status_code, 401)
+        self.assertEqual(self.c.post("/api/weekly/run", headers={"X-Token": "wrong"}).status_code, 401)
+        self.assertEqual(self.c.post("/api/weekly/run", headers={"X-Token": "tok-123"}).status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -284,8 +284,12 @@ def api_preview():
 
 @app.post("/api/weekly/run")
 def api_weekly_run():
-    tok = os.environ.get("WEEKLY_TOKEN")
-    if tok and request.headers.get("X-Token") != tok:
+    # Machine trigger (GitHub Actions / n8n). It is exempt from CSRF and login, so it is OFF unless a token is configured;
+    # previously an unset WEEKLY_TOKEN left it open to anyone. Constant-time comparison.
+    tok = os.environ.get("WEEKLY_TOKEN", "")
+    if not tok:
+        abort(403, "The weekly trigger API is disabled: set WEEKLY_TOKEN on the server to enable it.")
+    if not hmac.compare_digest(request.headers.get("X-Token", ""), tok):
         abort(401)
     run = SVC.run_weekly()
     return jsonify({"run_id": run["run_id"], "window": run["window"], "pulse_words": run["pulse_words"],

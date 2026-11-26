@@ -47,7 +47,8 @@ sequenceDiagram
 2. **Gates are per action.** Two weekly actions and one gate per ticket; approving one never touches another (tested in `edit_correctness.md`).
 3. **`call_tool` checks, in order:** gate approved → required arguments → PII re-scan of the JSON payload → implementation → audit line.
 4. **A flagged draft cannot reach `decide_ticket(approve=True)`** (returns 403) because the reviewer set `send_blocked`.
-5. **Superseded actions.** Re-running the weekly loop marks older pending actions `superseded`; they can no longer be approved.
+5. **Superseded actions.** Re-running the weekly loop marks a *different* run's pending actions `superseded`; they can no longer be approved. Re-running *identical* content never reopens an approved action (that would duplicate the write); a rejected action is re-offered under a new id.
+6. **Failed writes.** A decision becomes `approved` only after its writes succeed; if a write fails the gate returns to pending and nothing is journalled.
 
 ## Audit log
 `audit_log.jsonl`, one line per executed tool call:
@@ -100,4 +101,4 @@ Real outputs are in [`outputs/samples/sample_outputs.md`](../outputs/samples/sam
 Stdio is **not** a hosted-service transport for outside clients: it only works when the client launches the server itself. Remote clients need the HTTP transport, which is a separate process that must share storage with the web app. On a platform that gives each service its own filesystem (a second Render service), receipts written by the web app would not be visible to the server, so run both processes in one container or on one VM with a shared disk. The in-process default avoids that problem and is what the hosted demo should use.
 
 ### Receipt rules (all tested in Evals 6 and 8)
-Signed (HMAC-SHA256) · bound to the tool and a hash of the exact arguments · **expires after 15 minutes** (`APPROVAL_TTL_SECONDS`) · **single use** (atomic rename, so 8 concurrent uses of one receipt yield exactly one success) · never issued for a rejected or pending gate · a validation failure (missing argument, PII) is reported as an MCP error **before** the receipt is consumed.
+Signed (HMAC-SHA256) · bound to the tool and a hash of the exact arguments · **expires after 15 minutes** (`APPROVAL_TTL_SECONDS`) · **single use** (claimed by an exclusive create of `<id>.used`, which only one caller can win on Windows and POSIX; 8 concurrent uses of one receipt yield exactly one success. The earlier claim, a rename, was not atomic on Windows and let one approval authorise several writes; fixed 26 Nov 2026) · never issued for a rejected or pending gate · a validation failure (missing argument, PII) is reported as an MCP error **before** the receipt is consumed.

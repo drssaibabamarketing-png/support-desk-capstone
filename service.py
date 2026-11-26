@@ -287,13 +287,27 @@ class Service:
             if approve and t["send_blocked"]:
                 return {"ok": False, "status": 403, "error": "The reviewer flagged this draft; it cannot be approved."}
             m["gate"].decide(approve)
-            m["status"] = "approved" if approve else "rejected"
-            t["decision"] = m["gate"].status
             if approve:
+                # Atomic decision: the ticket becomes "approved" (and is journalled) only after BOTH writes succeeded.
+                # On a failure the gate goes back to pending; writes that did complete are remembered, so approving
+                # again performs only the missing ones and never appends a duplicate record.
                 record, email = mcp.build_payloads(t)
                 record["ticket_id"] = m["q_id"] + "/" + t["tid"]
-                m["writes"] = [("append_support_record", mcp.call_tool("append_support_record", record, m["gate"])),
-                               ("create_email_draft", mcp.call_tool("create_email_draft", email, m["gate"]))]
+                done = m.setdefault("written", {})
+                try:
+                    for tool, payload in (("append_support_record", record), ("create_email_draft", email)):
+                        if tool not in done:
+                            done[tool] = mcp.call_tool(tool, payload, m["gate"])
+                except Exception as e:                           # noqa: BLE001
+                    m["gate"].status, m["gate"].decided_at = "pending", None
+                    log_event({"event": "ticket_write_failed", "ticket": tid, "q_id": m["q_id"], "error": type(e).__name__,
+                               "completed": sorted(done)})
+                    return {"ok": False, "status": 500, "error": f"A write failed ({type(e).__name__}); the ticket is still pending "
+                            f"and was not recorded as approved. Completed: {', '.join(sorted(done)) or 'none'}. "
+                            "Approving again performs only the missing write."}
+                m["writes"] = list(done.items())
+            m["status"] = "approved" if approve else "rejected"
+            t["decision"] = m["gate"].status
             log_event({"event": "ticket_decision", "ticket": tid, "q_id": m["q_id"], "decision": m["status"]})
             if not self._replaying:
                 self.journal.add("ticket", q_id=m["q_id"], status=m["status"])
@@ -331,21 +345,31 @@ class Service:
             sig = [g for g in groups if g["count"] >= config.RECURRING_QUESTION_MIN and g["key"] != "advice"
                    and not g["key"].startswith("other:")]
             run = weekly.build(self.reviews_path, sig)
-            run["run_id"] = "W-" + hashlib.sha1((run["window"] + run["pulse"]).encode()).hexdigest()[:6]
+            # the id covers everything a weekly action writes, so identical id <=> identical content
+            run["run_id"] = "W-" + hashlib.sha1((run["window"] + run["pulse"] + run["explainer_text"]).encode()).hexdigest()[:6]
             run["question_groups"] = groups
             run["created"] = self.now()
-            for a in self.actions.values():                         # an older run's pending actions are superseded
-                if a["status"] == "pending":
+            for a in self.actions.values():                         # a DIFFERENT run's pending actions are superseded
+                if a["status"] == "pending" and a["run_id"] != run["run_id"]:
                     a["status"] = "superseded"
             run["action_ids"] = []
             specs = [("append_weekly_record", f"{config.OUT.name}/weekly_log.md (+ .jsonl)", "Append pulse + fee explainer entry (with review ids per theme) to the team doc"),
                      ("create_weekly_email", f"{config.OUT.name}/weekly_pulse_draft.eml (X-Unsent, never sent)", "Create the weekly pulse email draft")]
             for tool, where, what in specs:
-                aid = f"{run['run_id']}:{tool}"
+                # Re-running identical content must never reopen an APPROVED action: its file was already written, and a
+                # second approval would append a duplicate entry and bump the canonical version. A pending action keeps
+                # its gate. A rejected or superseded one wrote nothing, so the same content may be offered again, but as
+                # a NEW action with a new id: the earlier record and its decision are kept, never overwritten.
+                same = [a for a in self.actions.values() if a["run_id"] == run["run_id"] and a["tool"] == tool]
+                live = next((a for a in same if a["status"] in ("pending", "approved")), None)
+                if live:
+                    run["action_ids"].append(live["id"])
+                    continue
+                aid = f"{run['run_id']}:{tool}" + (f":{len(same) + 1}" if same else "")
                 self.actions[aid] = {"id": aid, "run_id": run["run_id"], "tool": tool, "where": where, "what": what,
                                      "status": "pending", "gate": mcp.ApprovalGate(what), "result": None}
                 run["action_ids"].append(aid)
-            self.runs.append(run)
+            self.runs = [r for r in self.runs if r["run_id"] != run["run_id"]] + [run]
             log_event({"event": "weekly_run", "run": run["run_id"], "window": run["window"], "reviews": run["n_reviews"],
                        "themes": len(run["themes"]), "pulse_words": run["pulse_words"], "signals": [s["key"] for s in sig]})
             return run
@@ -368,14 +392,21 @@ class Service:
             if a["status"] != "pending":
                 return {"ok": False, "error": f"action already {a['status']}"}
             a["gate"].decide(approve)
-            a["status"] = "approved" if approve else "rejected"
             if approve:
+                # Atomic decision: "approved", the canonical explainer and the journal row only after the write succeeded.
                 payload = self.action_payload(aid)
                 if a["tool"] == "append_weekly_record":
                     payload["entry_md"] = payload["entry_md"].replace("{approval time}", a["gate"].decided_at)
-                a["result"] = mcp.call_tool(a["tool"], payload, a["gate"])
+                try:
+                    a["result"] = mcp.call_tool(a["tool"], payload, a["gate"])
+                except Exception as e:                           # noqa: BLE001
+                    a["gate"].status, a["gate"].decided_at = "pending", None
+                    log_event({"event": "action_write_failed", "action": aid, "error": type(e).__name__})
+                    return {"ok": False, "error": f"The write failed ({type(e).__name__}); the action is still pending and "
+                            "was not recorded as approved."}
                 if a["tool"] == "append_weekly_record":
                     self._register_canonical(a, next(r for r in self.runs if r["run_id"] == a["run_id"]))
+            a["status"] = "approved" if approve else "rejected"
             log_event({"event": "action_decision", "action": aid, "decision": a["status"]})
             if not self._replaying:
                 self.journal.add("action", tool=a["tool"], window=next(r for r in self.runs if r["run_id"] == a["run_id"])["window"],

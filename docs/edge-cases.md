@@ -37,7 +37,9 @@ Status: **tested** = covered by an eval or unit test; **checked** = exercised by
 | Approving a reviewer-flagged draft | 403, nothing written | tested |
 | Approving a rejected or already approved item | Refused, no state change | tested (ticket); checked (action) |
 | Approving the doc action does not create the email | Separate gate | tested |
-| Re-running the weekly loop with pending actions | Older pending actions become `superseded` | checked |
+| Re-running the weekly loop with pending actions | A different run's pending actions become `superseded`; identical content keeps its pending action and gate | tested |
+| Re-running the weekly loop after an approval (identical content) | The approved action stays approved and is not offered again (no duplicate doc entry, no canonical version bump); a rejected one is re-offered under a new id, the rejection kept | tested |
+| A write fails during approval | The ticket/action stays pending, nothing is journalled; approving again performs only the missing write | tested |
 | Edit that breaks the one-link rule | Refused with the reviewer's failure codes | checked |
 | Two browsers act at once | `RLock` serialises mutations | checked |
 | App restarts | Queue and canonical store reset | limit |

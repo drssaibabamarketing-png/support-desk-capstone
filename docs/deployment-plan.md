@@ -13,7 +13,7 @@
 | Name | Default | Meaning |
 |---|---|---|
 | `PORT` | 5000 | HTTP port |
-| `WEEKLY_TOKEN` | unset | If set, `POST /api/weekly/run` requires header `X-Token` |
+| `WEEKLY_TOKEN` | unset | `POST /api/weekly/run` is **disabled (403) unless this is set**; callers must send it as header `X-Token` (constant-time check) |
 | `REAL_CLOCK` | 0 | `1` stamps new questions with real time instead of the demo clock (pinned to the end of the reviews export) |
 | `DESK_OUT`, `DESK_LOGS` | `outputs/`, `logs/` | Where approved writes and desk logs go |
 | `CORPUS_LAST_CHECKED` | 22 Oct 2026 | Fallback date; per-source dates live in `data/source_checks.json` |
