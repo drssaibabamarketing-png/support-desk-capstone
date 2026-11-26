@@ -29,6 +29,7 @@ os.environ["DESK_OUT"] = str(RT / "out")
 os.environ["DESK_LOGS"] = str(RT / "logs")
 sys.path.insert(0, str(ROOT))
 
+import contextlib                                      # noqa: E402
 import copy                                            # noqa: E402
 import pandas as pd                                    # noqa: E402
 
@@ -625,7 +626,7 @@ def approval_security():
     os.environ["DESK_DB"] = str(db)
 
     def rows():
-        with sqlite3.connect(str(db)) as c:
+        with contextlib.closing(sqlite3.connect(str(db))) as c:
             return [tuple(r) for r in c.execute("select kind, body from events order by id")]
 
     def audit():
@@ -730,7 +731,7 @@ def privacy_pathways():
         check(S, "refine instruction path: redacted before it reaches any agent", not any(d in json.dumps(svc.desk.tickets[tid], default=str) for d in dummies), str(ref.get("ok")))
         ed = svc.edit_draft(tid, f"Please call {PHONE} ([source]({t['outputs']['facts'].get('citation_url')}))")
         check(S, "human edit containing an identifier is refused", not ed["ok"], str(ed.get("error"))[:70])
-        with sqlite3.connect(str(db)) as c:
+        with contextlib.closing(sqlite3.connect(str(db))) as c:
             jb = " ".join(r[0] for r in c.execute("select body from events"))
         check(S, "SQLite journal holds only redacted text", (not any(d in jb for d in dummies)) and "[PAN REDACTED]" in jb, jb[:80])
         # PII-bearing review file through the Pattern Agent index including the vectoriser vocabulary

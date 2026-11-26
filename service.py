@@ -10,6 +10,7 @@ by itself. `snapshot()` is a deterministic view of all state, used by the edit-c
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 import csv
 import hashlib
@@ -71,16 +72,27 @@ class Journal:
         self.on = True
         try:
             config.LOGS.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(self.path) as c:
+            with self._conn() as c:
                 c.execute("create table if not exists events (id integer primary key autoincrement, ts text, kind text, body text)")
         except Exception:                                    # noqa: BLE001
             self.on = False
+
+    @contextlib.contextmanager
+    def _conn(self):
+        """Commit on success, roll back on error, and ALWAYS close. `with sqlite3.connect()` alone only commits; the open
+        handle then keeps the file locked on Windows (the evals could not move state.db) and leaks a connection per call."""
+        c = sqlite3.connect(self.path)
+        try:
+            with c:
+                yield c
+        finally:
+            c.close()
 
     def add(self, kind: str, **body) -> None:
         if not self.on:
             return
         try:
-            with sqlite3.connect(self.path) as c:
+            with self._conn() as c:
                 c.execute("insert into events (ts, kind, body) values (?,?,?)",
                           (datetime.now().isoformat(timespec="seconds"), kind, json.dumps(body, ensure_ascii=False)))
         except Exception:                                    # noqa: BLE001
@@ -90,7 +102,7 @@ class Journal:
         if not self.on:
             return []
         try:
-            with sqlite3.connect(self.path) as c:
+            with self._conn() as c:
                 return [(k, json.loads(b)) for k, b in c.execute("select kind, body from events order by id")]
         except Exception:                                    # noqa: BLE001
             return []

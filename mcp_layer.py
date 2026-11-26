@@ -159,24 +159,50 @@ def issue_receipt(gate: "ApprovalGate", name: str, arguments: dict) -> str:
 def verify_and_consume_receipt(receipt_id: str, name: str, arguments: dict, now: float | None = None, consume: bool = True) -> dict:
     """Used by the MCP server. Raises ApprovalRequired unless the receipt is genuine, for THIS tool and THESE arguments, and unused."""
     p = OUT / "receipts" / f"{''.join(c for c in str(receipt_id) if c.isalnum())}.json"
-    if not p.exists():
-        raise ApprovalRequired("no human approval on record for this call (receipt not found)")
-    body = json.loads(p.read_text())
+    try:
+        body = json.loads(_retry_sharing(p.read_text))
+    except FileNotFoundError:                                     # never issued, or consumed by a concurrent caller just now
+        raise ApprovalRequired("no human approval on record for this call (receipt not found)") from None
+    except (OSError, ValueError):
+        raise ApprovalRequired("receipt could not be read; approve the action again") from None
     sig = body.pop("sig", "")
     good = hmac.new(_key(), json.dumps({k: body[k] for k in sorted(body)}).encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, good):
         raise ApprovalRequired("receipt signature invalid")
     if (now if now is not None else time.time()) > body.get("expires_at", 0):
-        p.rename(p.with_suffix(".expired"))
+        try:
+            p.rename(p.with_suffix(".expired"))
+        except OSError:
+            pass                                                  # refused either way; the file state is not security-relevant
         raise ApprovalRequired("approval expired (receipts are valid for a limited time); approve the action again")
     if body["tool"] != name or body["args_sha256"] != args_hash(name, arguments):
         raise ApprovalRequired("receipt does not match this tool and these exact arguments (content changed after approval)")
+    claim = p.with_suffix(".used")
+    if claim.exists():
+        raise ApprovalRequired("receipt already used")
     if consume:
+        # Single use. The claim is an EXCLUSIVE CREATE of <id>.used (O_CREAT|O_EXCL), which the OS guarantees only one
+        # caller can win, on Windows (CREATE_NEW) and POSIX alike. The previous claim was a rename of <id>.json, which is
+        # atomic on POSIX but NOT on Windows: concurrent renames of one file were each reported as successful, so one
+        # approval could authorise several writes (found 26 Nov 2026; tests/test_capstone.py). Losers fail closed.
         try:
-            p.rename(p.with_suffix(".used"))                      # single use; the rename is atomic, so only one caller wins a race
-        except FileNotFoundError:
+            os.close(os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        except FileExistsError:
             raise ApprovalRequired("receipt already used") from None
+        except OSError:
+            raise ApprovalRequired("receipt could not be claimed; it was not used by this call") from None
     return body
+
+
+def _retry_sharing(fn, attempts: int = 50, delay: float = 0.005):
+    """Run fn, retrying a Windows sharing violation (PermissionError) for up to ~0.25 s. Other errors pass straight through."""
+    for i in range(attempts):
+        try:
+            return fn()
+        except PermissionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(delay)
 
 
 def validate_args(name: str, arguments: dict) -> None:
