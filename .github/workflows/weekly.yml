@@ -7,6 +7,11 @@ on:
 jobs:
   weekly:
     runs-on: ubuntu-latest
+    # The `secrets` context is not allowed in a step-level `if:`, so the secrets are mapped to job env vars first
+    # (the earlier `if: ${{ secrets.APP_URL != '' }}` made the workflow invalid). Secrets reach curl only through env.
+    env:
+      APP_URL: ${{ secrets.APP_URL }}
+      WEEKLY_TOKEN: ${{ secrets.WEEKLY_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,6 +20,7 @@ jobs:
       - run: DESK_OUT=weekly_out DESK_LOGS=weekly_logs python weekly_job.py
       - uses: actions/upload-artifact@v4
         with: {name: weekly-result, path: weekly_out/weekly_job_result.json}
-      - name: Trigger the hosted app (optional)
-        if: ${{ secrets.APP_URL != '' }}
-        run: curl -fsS -X POST "${{ secrets.APP_URL }}/api/weekly/run" -H "X-Token: ${{ secrets.WEEKLY_TOKEN }}"
+      - name: Trigger the hosted app (optional; the app refuses the call unless its WEEKLY_TOKEN matches)
+        if: ${{ env.APP_URL != '' && env.WEEKLY_TOKEN != '' }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/weekly/run" -H "X-Token: $WEEKLY_TOKEN"

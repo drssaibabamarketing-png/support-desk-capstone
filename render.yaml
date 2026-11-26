@@ -3,6 +3,10 @@ services:
     name: support-desk-capstone
     runtime: python
     plan: free
+    # PERSISTENCE: the free plan has no disk, so the journal (approvals, edits, live questions) and approved writes are
+    # lost on every redeploy or restart. For state that survives, use a paid plan with a disk and uncomment:
+    # disk: {name: desk-state, mountPath: /var/data, sizeGB: 1}
+    # and add env vars DESK_DB=/var/data/state.db, DESK_OUT=/var/data/outputs, DESK_LOGS=/var/data/logs
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120
     envVars:

@@ -1,0 +1,3 @@
+-r requirements.txt
+# test-only: lets the config test parse the GitHub workflows and deploy files
+pyyaml>=6.0

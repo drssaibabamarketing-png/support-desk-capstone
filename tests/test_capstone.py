@@ -394,6 +394,29 @@ class SourceVerification(unittest.TestCase):
         self.assertEqual(exp["last_checked"], "26 Nov 2026")                           # no longer the 22 Oct home page
 
 
+class DeploymentConfig(unittest.TestCase):
+    """D6: weekly.yml did not parse (an unquoted ': ' in a run line) and used `secrets` in a step `if:`."""
+    ROOT = Path(__file__).resolve().parent.parent
+
+    def test_workflows_and_deploy_files_parse_and_never_test_secrets_in_if(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("pyyaml not installed (pip install -r requirements-dev.txt)")
+        files = sorted((self.ROOT / ".github" / "workflows").glob("*.yml")) + [self.ROOT / "render.yaml", self.ROOT / "docker-compose.yml"]
+        for f in files:
+            doc = yaml.safe_load(f.read_text(encoding="utf-8"))
+            self.assertIsInstance(doc, dict, f.name)
+            for job in (doc.get("jobs") or {}).values():
+                for step in job.get("steps", []):
+                    self.assertNotIn("secrets.", str(step.get("if", "")), f"{f.name}: secrets context is not allowed in a step if:")
+
+    def test_render_free_plan_states_that_state_is_lost(self):
+        txt = (self.ROOT / "render.yaml").read_text(encoding="utf-8")
+        self.assertIn("plan: free", txt)
+        self.assertIn("lost on every redeploy", txt)
+
+
 class WeeklyApi(unittest.TestCase):
     def setUp(self):
         import app as A
