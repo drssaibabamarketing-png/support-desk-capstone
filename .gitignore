@@ -2,7 +2,7 @@
 venv/
 __pycache__/
 *.pyc
-logs/
+/logs/
 # runtime writes of the running app (the shipped evidence lives in outputs/evals and outputs/samples)
 outputs/support_log.*
 outputs/support_reply_draft.*

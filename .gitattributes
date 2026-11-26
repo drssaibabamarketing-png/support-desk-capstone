@@ -1,0 +1,4 @@
+# keep LF in the repo and working tree (Procfile, Dockerfile and shell commands break with CRLF)
+* text=auto eol=lf
+*.png binary
+*.db binary
