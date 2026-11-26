@@ -13,7 +13,7 @@
 - **The connection:** question counts into the pulse, and the approved explainer as the canonical answer.
 - Per-action approval gates (two weekly, one per ticket) and a human **edit** path that is re-reviewed.
 - Queue, Overview, Sources, Approvals and Canonical views; per-source last-checked dates.
-- State snapshots and diffs; three evaluations over the assembled system; scheduled headless weekly run.
+- State snapshots and diffs; ten groups of evaluations over the assembled system; scheduled headless weekly run.
 - Docs, Docker, CI and an optional n8n workflow.
 
 ## Changed from the milestones

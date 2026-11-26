@@ -4,7 +4,7 @@
 
 **One system for support and product: reviews become themes, questions become cited drafts, and the weekly fee explainer becomes the answer support reuses. A human approves every write.**
 
-![Python](https://img.shields.io/badge/python-3.11-0F8B6D) ![Flask](https://img.shields.io/badge/flask-3-0F8B6D) ![Evals](https://img.shields.io/badge/evals-169%2F169-0F8B6D) ![Tests](https://img.shields.io/badge/unit%20tests-13%20pass-0F8B6D) ![License](https://img.shields.io/badge/license-MIT-5C6963)
+![Python](https://img.shields.io/badge/python-3.11-0F8B6D) ![Flask](https://img.shields.io/badge/flask-3-0F8B6D) ![Evals](https://img.shields.io/badge/evals-175%2F175-0F8B6D) ![Tests](https://img.shields.io/badge/unit%20tests-30%20pass%20%C2%B7%207%20voice%20skipped-0F8B6D) ![License](https://img.shields.io/badge/license-MIT-5C6963)
 
 NextLeap Applied Generative AI Bootcamp · Cohort 7 · Capstone · Product: **Groww** with **HDFC Mutual Fund** schemes
 
@@ -64,14 +64,15 @@ Also: Overview (above), Evals, Written files. UI guide and a 3-minute demo scrip
 
 ## Quick start
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt          # requirements-dev.txt adds the test-only extras
 python app.py                         # http://localhost:5000
 python -m unittest discover -s tests -v
 python -m evals.run_evals             # regenerates outputs/evals/*
 python make_samples.py                # regenerates outputs/samples/*
 python mcp_server.py                  # the MCP server (stdio); normally started by an MCP client
 python tools/mcp_demo.py              # discovery + refused / allowed / replayed calls over the real protocol
-python tools/scan_repo.py             # pre-submission scan for PII, secrets and stray generated files
+python tools/scan_repo.py             # pre-submission scan of what git would publish: PII, secrets, stray generated files
+python tools/source_status.py --write # lists official sources needing manual verification (exit 1 while any is overdue/unconfirmed)
 REVIEWER_PASSWORD=choose-one python app.py   # the live desk needs it; without it only the public sample demo (/demo) is available
 python make_demo.py                   # rebuilds data/demo_snapshot.json, the only data the public demo shows
 python weekly_job.py                  # the scheduled, headless weekly run
@@ -91,7 +92,20 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 | Voice | Consent notice (the browser may send audio to Google or Microsoft), English / Hindi / Kannada and more, listening / processing / success / error states, transcript review before submission, retry and typed fallback, clarification chips, read-aloud. Tested with a **mocked** recogniser in a real browser engine; **not** tested with a live microphone |
 | Facts | DP charges per sell order; five expense ratios and three source pages re-checked on 26 Nov |
 | Reviewer | Also rejects sentences unsupported by the cited fact, including reworded or reordered ones |
-| Evals | 169 checks in ten groups, including a 38-question hand-labelled golden dataset |
+| Evals | 175 checks in ten groups, including a 38-question hand-labelled golden dataset |
+
+## What changed in the Claude Code audit (26 Nov)
+| Area | Defect found | Now |
+|---|---|---|
+| Approval receipts | On Windows, single use was not atomic (a rename claim): one approval could authorise several MCP writes | Exclusive-create claim; 1 winner in 1,000 concurrent rounds; losers get a clean refusal |
+| Weekly approvals | Re-running identical content turned an approved action back to pending; approving again duplicated the doc entry and bumped the canonical version | Approved actions are never re-offered; rejected ones are re-offered under a new id with the rejection kept |
+| Decisions | A ticket or action became approved before its writes ran | Approved and journalled only after the writes succeed; a retry performs only the missing write |
+| Weekly API | `/api/weekly/run` was open to anyone when `WEEKLY_TOKEN` was unset | Disabled without a token; constant-time check |
+| Access | Everyone could read the live queue, audit log and written files, and submit questions; no password meant anyone could approve | Live desk reviewer-only, fail closed; public read-only demo on synthetic sample data |
+| Hardening | Login limit bypassable with `X-Forwarded-For`; no CSP; signing key could enter the Docker image | Real client address (`PROXY_HOPS`), nonce-based CSP, HSTS on HTTPS, `.dockerignore` |
+| Persistence | Refinements and re-drafts not journalled; accepted edits dropped on restart after the stale date | Journalled and replayed; restored stale edits kept but blocked |
+| Sources | Scheme-page facts other than expense ratio, minimum SIP and exit load carried a date they were not checked on | Warnings wherever a source is overdue, unconfirmed or due soon; [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md) lists what needs a person |
+| CI and tooling | `weekly.yml` did not parse; evals crashed on Windows (unclosed SQLite); one eval check could never fail | Fixed, each with a test; the vacuous check is kept and a strict one added |
 
 ## MCP and the approval gate
 `mcp_layer.py` defines four tools (served over the real protocol by `mcp_server.py`, see below), each with a name, description and input schema: `append_weekly_record`, `create_weekly_email`, `append_support_record`, `create_email_draft`. All writes go through `call_tool(name, args, gate)`, which refuses unless **that action's own** `ApprovalGate` is approved, then checks required arguments, re-scans the payload for PII, writes, and appends an audit line. Gates exist per action (two weekly, one per ticket); a draft the reviewer flagged cannot be approved (403). Full reference with schemas, sequence diagrams, failure modes and how to swap in real Docs/Gmail MCP servers: **[docs/mcp.md](docs/mcp.md)**.
@@ -113,7 +127,7 @@ No API key is needed: the agents are rules and retrieval. Environment variables 
 Rule-by-rule map and threat model: [docs/compliance-model.md](docs/compliance-model.md).
 
 ## Evaluation
-`python -m evals.run_evals` runs ten groups of checks over the assembled system (about 30 s, no network except the local MCP subprocess). Results are saved in [`outputs/evals/`](outputs/evals/) and shown on the Evals page.
+`python -m evals.run_evals` runs ten groups of checks over the assembled system (about 30 s, no network except the local MCP subprocess). Last full run: 175/175 on Python 3.14 / Windows 11; unit tests 30 pass and the 7 voice browser tests were skipped (Playwright not installed). Results are saved in [`outputs/evals/`](outputs/evals/) and shown on the Evals page.
 
 | Eval | Result | What it proves |
 |---|---|---|
@@ -121,13 +135,13 @@ Rule-by-rule map and threat model: [docs/compliance-model.md](docs/compliance-mo
 | **Correctness of edits** | 16/16 | State is diffed before and after: an edit changes only its draft; rejecting leaves the queue untouched; approving one action never triggers another; flagged drafts and pending gates cannot write |
 | **Grounding and compliance** | 26/26 | 15 sampled claims trace to a link or review id; 8 unanswerable questions say so; 32 advice/return attempts and 14 PII messages (rephrased, repeated) refused or redacted; a poisoned reviews file leaves the pulse clean; no log or file holds sensitive values |
 
-| **Regressions** (from outside reviews, 26 Nov) | 17/17 | DP charges are per sell order; fabricated and meaning-flipped claims that keep a valid source link are rejected; CSV upload is cleaned and moves the window; poisoned reviews never reach the Pattern Agent index; IFSC and UPI redacted; five expense ratios match the HDFC pages checked 26 Nov; generic "charges" no longer counted as brokerage |
+| **Regressions** (outside review and Claude Code audit, 26 Nov) | 20/20 | Source-verification statuses (unconfirmed scope, overdue after 60 days, no date changed); a strict version of the brokerage-count check; DP charges are per sell order; fabricated and meaning-flipped claims that keep a valid source link are rejected; CSV upload is cleaned and moves the window; poisoned reviews never reach the Pattern Agent index; IFSC and UPI redacted; five expense ratios match the HDFC pages checked 26 Nov; generic "charges" no longer counted as brokerage |
 | **Golden dataset** (hand labels in `data/golden.csv`) | 39/39 | status and cited page for all 38 questions, plus a summary row |
 | **MCP server** (stdio and streamable HTTP) | 13/13 | discovery, refusals without a valid receipt, tampered or replayed receipt, validation failure, PII, audit, app routed through the server |
 | **Persistence** | 5/5 | a restart keeps approvals, live questions and the canonical explainer; replay writes nothing |
 | **Approval security** | 12/12 | rejection, duplicate and 12-way concurrent approvals, receipt expiry and 8-way replay race, edit isolation, database diffed before and after |
 | **Privacy across pathways** | 10/10 | submit, refine, edit, preview API, CSV upload, Pattern Agent cache and vocabulary, SQLite, logs, browser storage, no audio route |
-| **Assignment requirements** | 18/18 | weekly loop, response loop, connection and compliance asserted one by one |
+| **Assignment requirements** | 21/21 | weekly loop, response loop, connection and compliance asserted one by one; anonymous visitors cannot reach the live desk or change anything, and the public demo holds sample data only |
 
 The evals found real bugs, including a persistence assertion that had been written too loosely (a restore run twice created duplicate tickets while the test still passed; the code is now idempotent and the assertion exact). Two earlier ones: (return-figure questions answered "not covered" instead of refused; fee questions counted as brokerage but missing the canonical answer). Both were fixed in code. Methodology and limits: [docs/evaluation.md](docs/evaluation.md).
 
@@ -161,12 +175,15 @@ weekly.py  pipeline.py        weekly loop · clustering, fee issue (from Milesto
 desk.py  agents.py            response loop · Facts / Pattern / Compliance (from Milestone 3)
 orchestrator.py reviewer.py   reply + routing note · hard-fail review
 corpus.py corpus_registry.py  Milestone 1 corpus and retrieval
-mcp_layer.py                  four MCP-style tools behind ApprovalGate
+mcp_layer.py mcp_server.py    four tools behind ApprovalGate · real MCP server with single-use receipts
+verification.py               source-verification status (overdue / unconfirmed / due soon)
 pii.py                        redaction
 weekly_job.py                 headless weekly run (cron / Actions / n8n)
-evals/run_evals.py  tests/    three evaluations · unit tests
-make_samples.py scripts_prepare.py
-data/                         reviews.csv · reviews_sample.csv · questions.csv · source_checks.json
+evals/run_evals.py  tests/    ten evaluation groups · unit tests
+make_samples.py make_demo.py  sample outputs · public demo snapshot (data/demo_snapshot.json)
+make_evals_report.py          EVALS_REPORT.md from the saved run
+tools/                        scan_repo, source_status, mcp_demo
+data/                         reviews.csv · reviews_sample.csv · questions.csv · golden.csv · source_checks.json · demo_snapshot.json
 templates/ static/            UI
 docs/                         documentation, diagrams (docs/diagrams/*.mmd), screenshots
 outputs/evals  outputs/samples   saved evidence

@@ -1,6 +1,6 @@
 
 ---
-## Ticket Q-039/b12a0796 - 2026-11-26  [P3]  status: reply approved
+## Ticket Q-039/687215ce - 2026-11-26  [P3]  status: reply approved
 **Complaint (redacted):** Why was brokerage deducted again when I sold my shares?
 
 **Reply draft:**

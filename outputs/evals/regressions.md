@@ -1,6 +1,6 @@
 # Eval 4: Regressions found by an outside review (26 Nov)
 
-Result: **17/17 checks pass**
+Result: **20/20 checks pass**
 
 | Check | Result | Detail |
 |---|---|---|
@@ -21,3 +21,6 @@ Result: **17/17 checks pass**
 | the same answer 3+ months after the last check is blocked as STALE_FACT and cannot be approved | PASS | ['STALE_FACT'] |
 | non-time-sensitive answers (brokerage explanation) are not blocked by the staleness rule | PASS |  |
 | a generic 'charges' complaint is not counted as brokerage | PASS | {'fee': 'Brokerage & trade charges', 'mentions': 1, 'negative_mentions': 1, 'pct_of_reviews': 50.0} |
+| strict: of the two complaints only the explicit brokerage one is counted (mentions == 1, review id b) | PASS | {'fee': 'Brokerage & trade charges', 'mentions': 1, 'review_ids': ['b']} |
+| a fact outside a page's recorded check scope (benchmark) is 'unconfirmed'; a checked field (minimum SIP) is verified | PASS |  |
+| after the 60-day interval every citable source is listed for manual verification as overdue, and no date was changed | PASS | 20 of 20 |

@@ -76,4 +76,4 @@ After an independent review found a wrong DP-charge fact, raw review text in the
 - **Eval 6, MCP server (10 checks):** see [mcp.md](mcp.md).
 - **Eval 7, persistence (5 checks):** a live question, an approved weekly action with its canonical explainer, and an approved ticket survive a restart; the other weekly action stays pending; replay writes no files.
 - Eval 4 also covers CSV upload (PII removed before saving, window follows the new data, bad file refused) and the meaning-flip edit ("per stock, not per sell order") rejected by the word-order check.
-Total: 123 checks (13 + 16 + 26 + 14 + 39 + 10 + 5).
+Total at the time this section was written: 123 checks. Current totals (175 at the last full run, ten groups) are in [EVALS_REPORT.md](../EVALS_REPORT.md) and `outputs/evals/summary.json`, which are generated from the run.

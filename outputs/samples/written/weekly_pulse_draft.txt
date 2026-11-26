@@ -1,4 +1,4 @@
-Subject: Weekly product pulse 2026-08-22 to 2026-08-29 (draft, run W-221413)
+Subject: Weekly product pulse 2026-08-22 to 2026-08-29 (draft, run W-ddc8f9)
 
 **Weekly Product Pulse | 2026-08-22 to 2026-08-29** (366 reviews, avg 3.24/5)
 
@@ -37,4 +37,4 @@ Fee explainer for support:
 Sources: [1] Groww pricing and charges (https://groww.in/pricing) | [2] Groww Help Centre: charges mentioned in the report (https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report)
 Last checked: 26 Nov 2026
 
-(Window 2026-08-22 to 2026-08-29; review ids per theme are in the team doc entry for run W-221413.)
+(Window 2026-08-22 to 2026-08-29; review ids per theme are in the team doc entry for run W-ddc8f9.)

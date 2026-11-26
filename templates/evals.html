@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Evals{% endblock %}
 {% block body %}<main class="wrap page">
 <h1>Evaluation results</h1>
-<p class="lede">Three checks over the assembled system. Re-run with <code>python -m evals.run_evals</code>; results are saved under <code>outputs/evals/</code>.</p>
+<p class="lede">Ten groups of checks over the assembled system (counts below). Re-run with <code>python -m evals.run_evals</code>; results are saved under <code>outputs/evals/</code>.</p>
 {% if summary %}<div class="stats">{% for k,v in summary.items() %}<div class="stat"><b>{{ v.passed }}/{{ v.total }}</b>{{ k|replace('_',' ') }}</div>{% endfor %}</div>{% endif %}
 {% for n,txt in docs.items() %}<section class="card"><h2>{{ n }}</h2><pre class="doc">{{ txt }}</pre></section>{% else %}<p class="mute">No saved results yet. Run the eval command.</p>{% endfor %}
 </main>{% endblock %}

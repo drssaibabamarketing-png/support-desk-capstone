@@ -1,4 +1,4 @@
-Subject: Support reply draft - ticket b12a0796
+Subject: Support reply draft - ticket 687215ce
 
 Brokerage is the fee the broker charges for each executed equity order; Groww publishes its current rates on its pricing page ([source](https://groww.in/pricing)). If this doesn't resolve your concern, reply here and our team will take a look.
 

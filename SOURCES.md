@@ -63,6 +63,8 @@ The app computes a status for every source and every cited fact (`verification.p
 
 **Recorded check scope.** `data/source_checks.json` now records, under `field_scope`, that the five HDFC scheme pages were compared on 26 Nov 2026 only for expense ratio, minimum SIP and exit load (as the note below always said). Their benchmark, riskometer, fund manager, objective and lock-in facts are therefore shown as **unconfirmed** until checked. Note: the customer-facing reply footer for those facts still prints the page's date (`Last checked: 26 Nov 2026`).
 
+**Content question for a person (not changed in code).** The registry and customer replies call the mid-cap scheme "HDFC Mid Cap Fund", while its URL, the golden labels and these docs say "HDFC Mid-Cap Opportunities Fund". Confirm the current official name on the HDFC page before changing either.
+
 **Citation fix.** The DP-charges explainer's source [2], which backs "per sell order, not per stock", is now the Help Centre FAQ that was checked for exactly that claim, instead of the Help Centre home page.
 
 ## Verification notes

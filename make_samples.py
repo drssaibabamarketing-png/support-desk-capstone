@@ -12,6 +12,8 @@ if S.exists():
 (S / "logs").mkdir()
 os.environ["DESK_OUT"] = str(S / "written")
 os.environ["DESK_LOGS"] = str(S / "logs")
+import tempfile  # noqa: E402
+os.environ["DESK_DB"] = str(Path(tempfile.mkdtemp()) / "samples_state.db")   # the journal never lands in outputs/samples
 
 from service import Service  # noqa: E402
 
@@ -49,5 +51,5 @@ out += ["## Weekly pulse run\n", f"```\n{run['pulse']}\n```\n", "## Appended doc
         "```text\n" + (w / "weekly_pulse_draft.txt").read_text(encoding="utf-8") + "\n```\n",
         "## Support record appended after approving question 1\n", "```markdown\n" + (w / "support_log.md").read_text(encoding="utf-8") + "```\n",
         "## Reply email draft for question 1 (never sent)\n", "```text\n" + (w / "support_reply_draft.txt").read_text(encoding="utf-8") + "\n```\n"]
-(S / "sample_outputs.md").write_text("\n".join(out), encoding="utf-8")
+(S / "sample_outputs.md").write_text("\n".join(out), encoding="utf-8", newline="\n")
 print("wrote", S / "sample_outputs.md")

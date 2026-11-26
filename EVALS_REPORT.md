@@ -1,6 +1,6 @@
 # Evals Report: The Support Desk
 
-**Overall: 169/169 checks pass** (Feasibility 13/13 · Regressions 17/17 · Golden 39/39 · MCP 13/13 · Persistence 5/5 · Edit correctness 16/16 · Grounding & compliance 26/26 · Approval security 12/12 · Privacy pathways 10/10 · Assignment requirements 18/18). Reproduce: `python -m evals.run_evals` (the MCP eval starts local subprocesses and a local HTTP server; the voice browser tests are separate: `python -m unittest tests.test_voice_browser`, mocked recogniser). Full tables: `outputs/evals/*.md`.
+**Overall: 175/175 checks pass** (Feasibility 13/13 · Regressions 20/20 · Golden 39/39 · MCP 13/13 · Persistence 5/5 · Edit correctness 16/16 · Grounding & compliance 26/26 · Approval security 12/12 · Privacy pathways 10/10 · Assignment requirements 21/21). Reproduce: `python -m evals.run_evals` (the MCP eval starts local subprocesses and a local HTTP server; the voice browser tests are separate: `python -m unittest tests.test_voice_browser`, mocked recogniser). Full tables: `outputs/evals/*.md`.
 
 ## 1. Golden dataset
 38 queued questions in `data/questions.csv` (synthetic, written for this demo; they mirror the review themes and the fee confusion), plus the 366-review weekly window in `data/reviews.csv`. Expected labels are hand-written in `data/golden.csv` (status: answered / refused / not covered, plus the page the answer should cite); the table compares them with what the system did. The labels were written by the system's author, so skim them.
@@ -61,12 +61,14 @@ Weekly golden checks (recounted from the CSV): 21 brokerage/trade-charge reviews
 | weekly loop: injected reviews never appear as quotes | PASS | quote ids ['R580', 'R50', 'R745'] |
 | weekly loop: poisoned run still meets its caps | PASS | 229 words |
 | nothing sensitive reached any log or written file (desk log, audit log, support log, drafts) | PASS | scanned 25 files from all three eval runs (desk logs, audit logs, support/weekly logs, email drafts); hits: none |
-| the repository itself contains none of the dummy sensitive values (they are built at run time) | PASS | 103 files scanned; hits none |
+| the repository itself contains none of the dummy sensitive values (they are built at run time) | PASS | 112 files scanned; hits none |
 
 Also adversarial in Eval 2: edits that add PII or advice are refused; a reviewer-flagged draft cannot be approved (403); approving one write never triggers another; rejecting leaves state unchanged (state diff before and after).
 
-## 2b. Regression tests from an outside review (26 Nov)
-An independent review found four real defects after the first version of this report; each now has a test.
+## 2b. Regression tests
+Defects found by an outside review and by the Claude Code audit (26 Nov 2026); each has a check. One older check in this table
+("a generic 'charges' complaint is not counted as brokerage") can never fail as written; it is kept unchanged and the strict
+check below it tests the same behaviour properly.
 | Check | Result | Detail |
 |---|---|---|
 | DP-charge fact says per sell order and never per stock per day | PASS | Selling delivery shares also attracts depository (DP) charges, applied per sell order, not per stock. |
@@ -86,6 +88,9 @@ An independent review found four real defects after the first version of this re
 | the same answer 3+ months after the last check is blocked as STALE_FACT and cannot be approved | PASS | ['STALE_FACT'] |
 | non-time-sensitive answers (brokerage explanation) are not blocked by the staleness rule | PASS |  |
 | a generic 'charges' complaint is not counted as brokerage | PASS | {'fee': 'Brokerage & trade charges', 'mentions': 1, 'negative_mentions': 1, 'pct_of_reviews': 50.0} |
+| strict: of the two complaints only the explicit brokerage one is counted (mentions == 1, review id b) | PASS | {'fee': 'Brokerage & trade charges', 'mentions': 1, 'review_ids': ['b']} |
+| a fact outside a page's recorded check scope (benchmark) is 'unconfirmed'; a checked field (minimum SIP) is verified | PASS |  |
+| after the 60-day interval every citable source is listed for manual verification as overdue, and no date was changed | PASS | 20 of 20 |
 
 ## 2c. MCP server and persistence
 | Check | Result | Detail |
@@ -95,15 +100,15 @@ An independent review found four real defects after the first version of this re
 | a call whose arguments changed after approval is refused | PASS | Error executing tool create_email_draft: receipt does not match this tool and these exact  |
 | a receipt for one tool cannot be used on another | PASS | Error executing tool create_weekly_email: receipt does not match this tool and these exact |
 | a valid receipt lets the write through and it is an unsent draft | PASS | {"ok": true, "path": "support_reply_draft.eml", "sent": false} |
-| a receipt cannot be replayed | PASS | Error executing tool create_email_draft: no human approval on record for this call (receip |
+| a receipt cannot be replayed | PASS | Error executing tool create_email_draft: receipt already used |
 | PII is refused even with a valid receipt | PASS | Error executing tool create_email_draft: payload still contains PII (PAN); refusing to sto |
-| exactly one audit line was written by the server for the one allowed write | PASS | [{'ts': '2026-11-26T22:21:41', 'tool': 'create_email_draft', 'via': 'mcp-server', 'gate': 'bc8672db', 'receipt': 'zmswue |
+| exactly one audit line was written by the server for the one allowed write | PASS | [{'ts': '2026-11-26T23:07:30', 'tool': 'create_email_draft', 'via': 'mcp-server', 'gate': 'da449460', 'receipt': 'mjdwrr |
 | streamable-HTTP transport: tools are discoverable | PASS | ['append_support_record', 'append_weekly_record', 'create_email_draft', 'create_weekly_email'] |
 | streamable-HTTP transport: no receipt refused, valid receipt writes an unsent draft | PASS |  |
 | a validation failure (missing required argument) is reported as an error | PASS | Error executing tool create_email_draft: missing arguments: ['body'] |
-| approving the weekly doc action in the app wrote through the MCP server (audit says via mcp-server) | PASS | [{'ts': '2026-11-26T22:21:46', 'tool': 'append_weekly_record', 'via': 'mcp-server', 'gate': '4751801e', 'receipt': 'rfwraumveygpepzmvbmu', ' |
+| approving the weekly doc action in the app wrote through the MCP server (audit says via mcp-server) | PASS | [{'ts': '2026-11-26T23:07:37', 'tool': 'append_weekly_record', 'via': 'mcp-server', 'gate': '889f007c', 'receipt': 'xydpefwmvnbeecqmnktt', ' |
 | the other weekly action stayed pending | PASS |  |
-| after a restart the live question is back in the queue | PASS | {'questions': 1, 'edits': 1, 'tickets': 1, 'actions': 1} |
+| after a restart the live question is back in the queue | PASS | {'questions': 1, 'refinements': 0, 'redrafts': 0, 'edits': 1, 'tickets': 1, 'actions': 1} |
 | the approved weekly doc action and its canonical explainer survive | PASS | {'Brokerage & trade charges': 1} |
 | the other weekly action is still pending (not silently approved) | PASS |  |
 | an approved ticket stays approved; the replay wrote no new files | PASS |  |
@@ -145,15 +150,22 @@ An independent review found four real defects after the first version of this re
 | B. every reply is 3 sentences or fewer | PASS |  |
 | B. every factual sentence carries exactly one citation | PASS | [] |
 | B. out-of-corpus questions get an explicit not-covered reply naming what was searched | PASS | 7 questions |
-| B. the three agents run in parallel on three threads (their execution windows overlap; 0.6 s of work finishes in far less) | PASS | wall 0.21s for 3 x 0.2s agents; threads 3 |
+| B. the three agents run in parallel on three threads (their execution windows overlap; 0.6 s of work finishes in far less) | PASS | wall 0.27s for 3 x 0.2s agents; threads 3 |
 | C. a question asked 5+ times in the window appears in the weekly pulse as a support-desk signal | PASS | ['Groww brokerage and charges', 'HDFC scheme exit load'] |
 | C. after approval, the fee explainer is the canonical answer and the response loop reuses it (and says so) | PASS | 1 |
 | D. no reply to any queued question contains advice language or a return/performance figure | PASS | [] |
 | D. no write happened before approval (only the one approved weekly action wrote) | PASS |  |
 | E. queue, weekly pulse, sources, approvals, canonical explainers, overview, evals and login pages all load | PASS | {'/queue': 200, '/weekly': 200, '/sources': 200, '/approvals': 200, '/canonical': 200, '/': 200, '/evals': 200, '/login': 200} |
 | E. the queue page has the voice controls (mic, language, confirmation, consent) | PASS |  |
+| E. an anonymous visitor cannot open the live queue, tickets, weekly actions, approvals, sources or written files (redirected to login or the demo) | PASS | {'/': 302, '/queue': 302, '/ticket/5d306fb7': 302, '/weekly': 302, '/approvals': 302, '/canonical': 302, '/sources': 302, '/saved': 302} |
+| E. the public demo loads and shows sample data only (no live ticket id, audit content or approval/submit control) | PASS |  |
+| E. without a reviewer session, submitting, approving, the preview API and the weekly API are refused and change nothing | PASS | [302, 302, 302, 403] |
 
-**Voice:** the 7 browser tests drive a real Chromium engine with a *mocked* speech recogniser (unsupported browser, consent, permission denied, network and no-speech errors, state flow, transcript redaction, language list, read-aloud button). They do not exercise a real microphone or a vendor speech service; no live microphone test is claimed.
+**Voice:** the 7 browser tests (real Chromium engine, *mocked* speech recogniser) were **not run** for this report: Playwright is not installed in the environment that generated it, so they were skipped. No real microphone or vendor speech service is tested; no live microphone test is claimed.
+
+**Run environment for this report:** Python 3.14.7 on Windows 11.
+
+**Source verification at report time:** 15 verified, 0 due soon, 5 unconfirmed, 0 overdue (of 20 citable sources). See SOURCE_VERIFICATION.md and the Sources page.
 
 ## 3. Scores
 | Eval | Score | Source |
@@ -161,13 +173,13 @@ An independent review found four real defects after the first version of this re
 | Feasibility | 13/13 | outputs/evals/feasibility.md |
 | Correctness of edits | 16/16 | outputs/evals/edit_correctness.md |
 | Grounding and compliance | 26/26 | outputs/evals/grounding_compliance.md |
-| Regressions | 17/17 | outputs/evals/regressions.md |
+| Regressions | 20/20 | outputs/evals/regressions.md |
 | Golden dataset | 39/39 | outputs/evals/golden.md |
 | MCP server | 13/13 | outputs/evals/mcp_server.md |
 | Persistence | 5/5 | outputs/evals/persistence.md |
 | Approval security | 12/12 | outputs/evals/approval_security.md |
 | Privacy pathways | 10/10 | outputs/evals/privacy_pathways.md |
-| Assignment requirements | 18/18 | outputs/evals/requirements.md |
+| Assignment requirements | 21/21 | outputs/evals/requirements.md |
 
 ## 4. Limits
-The golden labels were written by the author of the system. Checks are rule-based and cover the cases written here; the questions are synthetic; the reviewer checks word-level support, not meaning (a flipped sentence using the fact's own words could pass); advice detection is regex-based and unusual phrasing can slip past it (the reply would still be a cited fact or "not covered"); source pages were last checked by hand on 22 Oct and 26 Nov 2026 (see SOURCES.md); LLM paths are untested; voice is tested with a mock only; install from a clean environment, gunicorn, Docker and n8n were not run in the authoring sandbox.
+The golden labels were written by the author of the system. Checks are rule-based and cover the cases written here; the questions are synthetic; the reviewer checks word-level support, not meaning (a flipped sentence using the fact's own words could pass); advice detection is regex-based and unusual phrasing can slip past it (the reply would still be a cited fact or "not covered"); source pages were last checked by hand on 22 Oct and 26 Nov 2026 and the five HDFC scheme pages only for expense ratio, minimum SIP and exit load (see SOURCES.md; with no new checks every source is overdue from 26 Jan 2027 and time-sensitive replies are then blocked); LLM paths are untested; voice is tested with a mock only, if at all (see above); a clean-environment install, gunicorn, Docker and n8n were not run.

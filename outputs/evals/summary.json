@@ -12,8 +12,8 @@
     "total": 26
   },
   "regressions": {
-    "passed": 17,
-    "total": 17
+    "passed": 20,
+    "total": 20
   },
   "golden": {
     "passed": 39,
@@ -36,7 +36,7 @@
     "total": 10
   },
   "requirements": {
-    "passed": 18,
-    "total": 18
+    "passed": 21,
+    "total": 21
   }
 }

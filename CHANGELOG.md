@@ -1,5 +1,18 @@
 # Changelog
 
+## 26 Nov 2026 (Claude Code audit and fixes)
+Work moved from Claude Chat to Claude Code. The folder was put under git (baseline commit 40f8381 = the handed-over state); each step below is its own commit with regression tests that fail on the previous code. No existing test or eval assertion was weakened.
+- **Security, receipts:** single use was not atomic on Windows (rename claim; concurrent renames all "succeeded"), so one approval could authorise several MCP writes. Now an exclusive-create claim; losers get a clean refusal.
+- **Data integrity, weekly approvals:** re-running identical content reopened an approved action (duplicate doc entry, canonical v2). Approved actions are final; rejected ones are re-offered under a new id. The run id also hashes the explainer.
+- **Data integrity, decisions:** approved and journalled only after the writes succeed; retries never duplicate a write.
+- **Access (owner's decision):** live desk reviewer-only and fail closed (no open demo mode); every change, including adding a question, needs a reviewer; public read-only `/demo` on synthetic sample data (`make_demo.py`); `/healthz` no longer reports counts.
+- **Weekly API:** `/api/weekly/run` disabled unless `WEEKLY_TOKEN` is set; constant-time check.
+- **Hardening:** login rate limit no longer trusts `X-Forwarded-For` (`PROXY_HOPS` for real proxies); Content-Security-Policy with per-request nonces; HSTS on HTTPS; `.dockerignore` keeps the signing key, receipts and runtime state out of images; login redirect rejects `/\host`.
+- **Persistence:** refinements (redacted) and re-drafts journalled and replayed; an accepted edit restored after the stale date keeps its wording but stays blocked.
+- **Sources (owner's decision, no dates invented, 60 days unchanged):** `verification.py` warns wherever a source is overdue, unconfirmed or due soon; `field_scope` records that the HDFC scheme pages were checked on 26 Nov only for expense ratio, minimum SIP and exit load; `tools/source_status.py` writes SOURCE_VERIFICATION.md; the DP explainer cites the DP FAQ page actually checked.
+- **CI and tooling:** `weekly.yml` did not parse and used `secrets` in a step `if:`; the evals crashed on Windows (SQLite connections never closed); `scan_repo.py` scans what git would publish; `make_evals_report.py` writes UTF-8 and states facts about the run (voice tests skipped, platform, source status); render.yaml states that the free plan loses state.
+- **Evals:** 175 checks (3 access checks, 2 source-verification checks, and a strict companion to an existing brokerage-count check that could never fail, which is kept unchanged). Unit tests: 37 (30 pass, 7 voice skipped without Playwright).
+
 ## 26 Nov 2026 (hardening pass)
 - **Defect fixed:** `restore()` replayed twice created duplicate tickets (queue 38 to 40) while the persistence assertion (`==` OR `>=`) still passed. Restore is now idempotent and the assertion is exact.
 - **Receipts:** expire after 15 minutes; single use is atomic (race-tested); validation failures no longer burn a receipt; ids are letters only.

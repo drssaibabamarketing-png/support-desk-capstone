@@ -1,7 +1,11 @@
 """Builds EVALS_REPORT.md: golden dataset, adversarial tests and scores, from the saved eval run + a fresh seeded queue."""
-import csv, json, os, tempfile
+import csv, functools, importlib.util, json, os, platform, sys, tempfile
 os.environ.setdefault("DESK_OUT", tempfile.mkdtemp()); os.environ.setdefault("DESK_LOGS", tempfile.mkdtemp())
+os.environ["DESK_DB"] = os.path.join(os.environ["DESK_LOGS"], "report_state.db")      # never the live journal
+open = functools.partial(open, encoding="utf-8")       # explicit UTF-8: the files contain characters cp1252 cannot encode
+import corpus
 import service
+import verification
 
 S = service.Service(); S.seed()
 sm = json.load(open("outputs/evals/summary.json"))
@@ -16,9 +20,10 @@ tot = sum(v["total"] for v in sm.values()); ok = sum(v["passed"] for v in sm.val
 import csv as _c
 GOLD = {r['q_id']: r for r in _c.DictReader(open('data/golden.csv', encoding='utf-8'))}
 rows = []
+QTEXT = {r["q_id"]: r["text"] for r in csv.DictReader(open("data/questions.csv"))}
 for tid in S.order:
     m, t = S.meta[tid], S.desk.tickets[tid]
-    o = t["outputs"]; q = next(r for r in csv.DictReader(open("data/questions.csv")) if r["q_id"] == m["q_id"])["text"]
+    o = t["outputs"]; q = QTEXT[m["q_id"]]
     f = o["facts"]
     adv_req = o["compliance"].get("advice_requested")
     out = ("refused (advice)" + (" + cited fact" if f["status"] == "covered" else "")) if adv_req else ("cited fact" if f["status"] == "covered" else "not covered, routed")
@@ -30,6 +35,14 @@ for tid in S.order:
     rows.append(f"| {m['q_id']} | {q.replace('|','/')} | {gl['expected_status']} {gl['expected_source_contains']} | {out} | {match} |")
 adv = open("outputs/evals/grounding_compliance.md").read().split("| Check | Result | Detail |")[1]
 adv_rows = [l for l in adv.splitlines() if l.startswith("| ") and "claim:" not in l and "---" not in l]
+_pw = importlib.util.find_spec("playwright") is not None
+VOICE = ("Playwright is installed in the environment that generated this report; run `python -m unittest tests.test_voice_browser` "
+         "and see its output for the 7 browser tests (real Chromium engine, *mocked* speech recogniser)." if _pw else
+         "the 7 browser tests (real Chromium engine, *mocked* speech recogniser) were **not run** for this report: Playwright is "
+         "not installed in the environment that generated it, so they were skipped.") + " No real microphone or vendor speech service is tested; no live microphone test is claimed."
+ENV = f"Python {platform.python_version()} on {platform.system()} {platform.release()}"
+_vs = verification.summary(corpus.ALLOWED_URLS)
+VER = f"{_vs['ok']} verified, {_vs['due_soon']} due soon, {_vs['unconfirmed']} unconfirmed, {_vs['overdue']} overdue (of {len(corpus.ALLOWED_URLS)} citable sources)"
 md = f"""# Evals Report: The Support Desk
 
 **Overall: {ok}/{tot} checks pass** (Feasibility {sm['feasibility']['passed']}/{sm['feasibility']['total']} · Regressions {sm['regressions']['passed']}/{sm['regressions']['total']} · Golden {sm['golden']['passed']}/{sm['golden']['total']} · MCP {sm['mcp_server']['passed']}/{sm['mcp_server']['total']} · Persistence {sm['persistence']['passed']}/{sm['persistence']['total']} · Edit correctness {sm['edit_correctness']['passed']}/{sm['edit_correctness']['total']} · Grounding & compliance {sm['grounding_compliance']['passed']}/{sm['grounding_compliance']['total']} · Approval security {sm['approval_security']['passed']}/{sm['approval_security']['total']} · Privacy pathways {sm['privacy_pathways']['passed']}/{sm['privacy_pathways']['total']} · Assignment requirements {sm['requirements']['passed']}/{sm['requirements']['total']}). Reproduce: `python -m evals.run_evals` (the MCP eval starts local subprocesses and a local HTTP server; the voice browser tests are separate: `python -m unittest tests.test_voice_browser`, mocked recogniser). Full tables: `outputs/evals/*.md`.
@@ -48,8 +61,10 @@ Weekly golden checks (recounted from the CSV): 21 brokerage/trade-charge reviews
 
 Also adversarial in Eval 2: edits that add PII or advice are refused; a reviewer-flagged draft cannot be approved (403); approving one write never triggers another; rejecting leaves state unchanged (state diff before and after).
 
-## 2b. Regression tests from an outside review (26 Nov)
-An independent review found four real defects after the first version of this report; each now has a test.
+## 2b. Regression tests
+Defects found by an outside review and by the Claude Code audit (26 Nov 2026); each has a check. One older check in this table
+("a generic 'charges' complaint is not counted as brokerage") can never fail as written; it is kept unchanged and the strict
+check below it tests the same behaviour properly.
 {chr(10).join(['| Check | Result | Detail |','|---|---|---|'] + reg_rows)}
 
 ## 2c. MCP server and persistence
@@ -58,7 +73,11 @@ An independent review found four real defects after the first version of this re
 ## 2d. Approval security, privacy pathways and assignment requirements
 {chr(10).join(['| Check | Result | Detail |','|---|---|---|'] + appr_rows + priv_rows + req_rows)}
 
-**Voice:** the 7 browser tests drive a real Chromium engine with a *mocked* speech recogniser (unsupported browser, consent, permission denied, network and no-speech errors, state flow, transcript redaction, language list, read-aloud button). They do not exercise a real microphone or a vendor speech service; no live microphone test is claimed.
+**Voice:** {VOICE}
+
+**Run environment for this report:** {ENV}.
+
+**Source verification at report time:** {VER}. See SOURCE_VERIFICATION.md and the Sources page.
 
 ## 3. Scores
 | Eval | Score | Source |
@@ -75,6 +94,6 @@ An independent review found four real defects after the first version of this re
 | Assignment requirements | {sm['requirements']['passed']}/{sm['requirements']['total']} | outputs/evals/requirements.md |
 
 ## 4. Limits
-The golden labels were written by the author of the system. Checks are rule-based and cover the cases written here; the questions are synthetic; the reviewer checks word-level support, not meaning (a flipped sentence using the fact's own words could pass); advice detection is regex-based and unusual phrasing can slip past it (the reply would still be a cited fact or "not covered"); source pages were last checked by hand on 22 Oct and 26 Nov 2026 (see SOURCES.md); LLM paths are untested; voice is tested with a mock only; install from a clean environment, gunicorn, Docker and n8n were not run in the authoring sandbox.
+The golden labels were written by the author of the system. Checks are rule-based and cover the cases written here; the questions are synthetic; the reviewer checks word-level support, not meaning (a flipped sentence using the fact's own words could pass); advice detection is regex-based and unusual phrasing can slip past it (the reply would still be a cited fact or "not covered"); source pages were last checked by hand on 22 Oct and 26 Nov 2026 and the five HDFC scheme pages only for expense ratio, minimum SIP and exit load (see SOURCES.md; with no new checks every source is overdue from 26 Jan 2027 and time-sensitive replies are then blocked); LLM paths are untested; voice is tested with a mock only, if at all (see above); a clean-environment install, gunicorn, Docker and n8n were not run.
 """
-open("EVALS_REPORT.md", "w").write(md); print(len(rows), "golden rows;", len(adv_rows), "adversarial rows")
+open("EVALS_REPORT.md", "w", newline="\n").write(md); print(len(rows), "golden rows;", len(adv_rows), "adversarial rows")

@@ -1,6 +1,6 @@
 # Eval 10: Assignment requirements (weekly loop, response loop, connection, compliance, interface)
 
-Result: **18/18 checks pass**
+Result: **21/21 checks pass**
 
 | Check | Result | Detail |
 |---|---|---|
@@ -15,10 +15,13 @@ Result: **18/18 checks pass**
 | B. every reply is 3 sentences or fewer | PASS |  |
 | B. every factual sentence carries exactly one citation | PASS | [] |
 | B. out-of-corpus questions get an explicit not-covered reply naming what was searched | PASS | 7 questions |
-| B. the three agents run in parallel on three threads (their execution windows overlap; 0.6 s of work finishes in far less) | PASS | wall 0.21s for 3 x 0.2s agents; threads 3 |
+| B. the three agents run in parallel on three threads (their execution windows overlap; 0.6 s of work finishes in far less) | PASS | wall 0.27s for 3 x 0.2s agents; threads 3 |
 | C. a question asked 5+ times in the window appears in the weekly pulse as a support-desk signal | PASS | ['Groww brokerage and charges', 'HDFC scheme exit load'] |
 | C. after approval, the fee explainer is the canonical answer and the response loop reuses it (and says so) | PASS | 1 |
 | D. no reply to any queued question contains advice language or a return/performance figure | PASS | [] |
 | D. no write happened before approval (only the one approved weekly action wrote) | PASS |  |
 | E. queue, weekly pulse, sources, approvals, canonical explainers, overview, evals and login pages all load | PASS | {'/queue': 200, '/weekly': 200, '/sources': 200, '/approvals': 200, '/canonical': 200, '/': 200, '/evals': 200, '/login': 200} |
 | E. the queue page has the voice controls (mic, language, confirmation, consent) | PASS |  |
+| E. an anonymous visitor cannot open the live queue, tickets, weekly actions, approvals, sources or written files (redirected to login or the demo) | PASS | {'/': 302, '/queue': 302, '/ticket/5d306fb7': 302, '/weekly': 302, '/approvals': 302, '/canonical': 302, '/sources': 302, '/saved': 302} |
+| E. the public demo loads and shows sample data only (no live ticket id, audit content or approval/submit control) | PASS |  |
+| E. without a reviewer session, submitting, approving, the preview API and the weekly API are refused and change nothing | PASS | [302, 302, 302, 403] |

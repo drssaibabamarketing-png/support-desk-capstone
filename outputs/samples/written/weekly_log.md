@@ -1,6 +1,6 @@
 
 ---
-## Weekly pulse 2026-08-22 to 2026-08-29 (run W-221413, approved 2026-11-26T22:21:53)
+## Weekly pulse 2026-08-22 to 2026-08-29 (run W-ddc8f9, approved 2026-11-26T23:08:03)
 
 **Weekly Product Pulse | 2026-08-22 to 2026-08-29** (366 reviews, avg 3.24/5)
 
