@@ -223,6 +223,9 @@
    "reply": "Brokerage is the fee the broker charges for each executed equity order; Groww publishes its current rates on its pricing page ([source](https://groww.in/pricing)). If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 26 Nov 2026",
    "citation_url": "https://groww.in/pricing",
    "last_checked": "26 Nov 2026",
+   "fact_intents": [
+    "brokerage"
+   ],
    "routing_note": "Route to: Billing & Charges Support. Priority: P3 (Low). Facts clean and no escalation signal. Facts: REUSED canonical explainer 'Brokerage & trade charges' v1 (approved 2026-11-26), not drafted fresh; source https://groww.in/pricing. Pattern: one-off - 2 similar reviews in the last 28 days (0 in the last 14 days vs 2 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Pricing & charges confusion'. Compliance: clean. Action: Send after approval; ticket can close once the customer confirms.",
    "hold": false,
    "reviewer_passed": true,
@@ -251,6 +254,9 @@
    "reply": "For the HDFC Small Cap Fund, exit load is 1% if redeemed within 1 year ([source](https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct)). If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 26 Nov 2026",
    "citation_url": "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct",
    "last_checked": "26 Nov 2026",
+   "fact_intents": [
+    "exit_load"
+   ],
    "routing_note": "Route to: Mutual Funds Desk. Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct. Pattern: one-off - 0 similar reviews in the last 28 days (0 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'App performance & bugs'. Compliance: clean. Action: Send after approval; ticket can close once the customer confirms.",
    "hold": false,
    "reviewer_passed": true,
@@ -283,6 +289,7 @@
    "reply": "I couldn't find this in our official sources, so I've passed it to our team to look into. If this doesn't resolve your concern, reply here and our team will take a look.\n\nLast checked: 22 Oct 2026",
    "citation_url": null,
    "last_checked": "22 Oct 2026",
+   "fact_intents": [],
    "routing_note": "Route to: Mutual Funds Desk. Priority: P3 (Low). No cited fact available. Facts: NOT covered by the corpus (searched: HDFC scheme page; topics tried: no recognised scheme/fee topic; schemes detected: none). Pattern: one-off - 1 similar reviews in the last 28 days (1 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Mutual funds & SIP'. Compliance: clean. Action: OPEN: needs a human answer (corpus does not cover this).",
    "hold": false,
    "reviewer_passed": true,
@@ -311,6 +318,9 @@
    "reply": "I can't advise on whether to invest or redeem, or on what returns to expect; I can only share facts from official sources. For the HDFC Small Cap Fund, exit load is 1% if redeemed within 1 year ([source](https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct)).\n\nLast checked: 26 Nov 2026",
    "citation_url": "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct",
    "last_checked": "26 Nov 2026",
+   "fact_intents": [
+    "exit_load"
+   ],
    "routing_note": "Route to: Mutual Funds Desk (cc: Compliance). Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct. Pattern: one-off - 1 similar reviews in the last 28 days (0 in the last 14 days vs 1 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Mutual funds & SIP'. Compliance: customer asked for advice/returns: refusal template used. Action: Send after approval; ticket can close once the customer confirms.",
    "hold": false,
    "reviewer_passed": true,
@@ -341,6 +351,10 @@
    "reply": "Selling delivery shares also attracts depository (DP) charges, applied per sell order, not per stock ([source](https://groww.in/pricing)). For your security, please don't share PAN, phone numbers or OTPs here; we've removed them from your message.\n\nLast checked: 26 Nov 2026",
    "citation_url": "https://groww.in/pricing",
    "last_checked": "26 Nov 2026",
+   "fact_intents": [
+    "brokerage",
+    "dp_charges"
+   ],
    "routing_note": "Route to: Billing & Charges Support. Priority: P3 (Low). Facts clean and no escalation signal. Facts: clean answer from https://groww.in/pricing. Pattern: one-off - 0 similar reviews in the last 28 days (0 in the last 14 days vs 0 in the 14 days before), 2026-08-01 to 2026-08-29; theme 'Pricing & charges confusion'. Compliance: PII removed before storage (PAN). Action: Send after approval; ticket can close once the customer confirms.",
    "hold": false,
    "reviewer_passed": true,

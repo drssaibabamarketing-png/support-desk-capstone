@@ -47,7 +47,7 @@ def ticket_view(svc: Service, tid: str, kind: str) -> dict:
             "pii_removed": [x["type"] for x in t["pii_removed"]],
             "facts_status": f["status"], "searched": f.get("searched", [])[-3:] if f["status"] != "covered" else [],
             "canonical": bool(f.get("canonical")), "reply": d["reply"]["full_text"], "citation_url": d["reply"]["citation_url"],
-            "last_checked": d["reply"]["last_checked"], "routing_note": d["routing"]["note"], "hold": d["routing"]["hold"],
+            "last_checked": d["reply"]["last_checked"], "fact_intents": f.get("fact_intents", []), "routing_note": d["routing"]["note"], "hold": d["routing"]["hold"],
             "reviewer_passed": t["review"]["passed"], "failure_codes": [x["code"] for x in t["review"]["failures"]],
             "pattern": {k: t["outputs"]["pattern"][k] for k in ("trend", "similar_count", "theme")},
             "agents_fired": t["fired_log"][0]["agents_fired"]}

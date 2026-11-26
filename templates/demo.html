@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% block title %}Demo (sample data){% endblock %}
+{% extends "base.html" %}{% from "_ver.html" import vbadge, vbanner, vlist with context %}{% block title %}Demo (sample data){% endblock %}
 {% block body %}<main class="wrap page">
 <h1>Support Desk: public demo</h1>
 <div class="banner warn" role="note"><b>Sample data, read-only.</b> {{ snap.data_note if snap else 'No demo snapshot has been built.' }}
@@ -16,6 +16,7 @@
     {% if t.canonical %}<span class="pill ok">canonical explainer reused</span>{% endif %}
     {% if t.hold %}<span class="pill warn">HOLD</span>{% endif %}
     <span class="pill {{ 'ok' if t.reviewer_passed else 'bad' }}">reviewer {{ 'passed' if t.reviewer_passed else 'flagged' }}</span></p>
+  {{ vbanner(fact_ver(t.citation_url, t.fact_intents), "The source of this sample reply") }}
   <div class="letter">{{ t.reply|reply_html }}</div>
   {% if t.facts_status != 'covered' %}<p class="mute">Not covered. Searched: {{ t.searched|join('; ') }}</p>{% endif %}
   <details><summary>Internal routing note (sample)</summary><p class="routing">{{ t.routing_note }}</p>
@@ -30,7 +31,7 @@
     <div class="pulse">{{ w.pulse|md }}</div></section>
   <section class="card"><h2>Fee explainer <span class="pill ok">{{ w.explainer.bullets|length }} / 6 bullets</span></h2>
     <ul>{% for b in w.explainer.bullets %}<li>{{ b.text }} <a href="{{ b.source_url }}" target="_blank" rel="noopener">[{{ b.source_n }}]</a></li>{% endfor %}</ul>
-    <p class="mute">{% for s in w.explainer.sources %}[{{ s.n }}] <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a> (checked {{ s.last_checked }}) {% endfor %}<br>Last checked: {{ w.explainer.last_checked }}</p></section>
+    <p class="mute">{% for s in w.explainer.sources %}[{{ s.n }}] <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a> (checked {{ s.last_checked }}) {{ vbadge(src_ver(s.url)) }} {% endfor %}<br>Last checked: {{ w.explainer.last_checked }}</p></section>
 </div>
 <div>
   <section class="card"><h2>Themes</h2><p class="sub">{{ w.n_reviews }} unique substantive review texts in {{ w.window }} (from {{ w.rows_in_export }} rows in the export).</p>
@@ -41,5 +42,6 @@
   <section class="card"><h2>Topics in the sample questions</h2>
     <table><tr><th>Topic</th><th>Asked</th></tr>{% for g in snap.sample_question_topics %}<tr><td>{{ g.label }}</td><td>{{ g.count }}</td></tr>{% endfor %}</table></section>
 </div></div>
+{{ vlist(manual) }}
 {% else %}<p class="mute">Run <code>python make_demo.py</code> to build the sample snapshot.</p>{% endif %}
 </main>{% endblock %}

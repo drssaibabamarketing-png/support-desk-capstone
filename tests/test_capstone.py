@@ -340,6 +340,60 @@ class Persistence(unittest.TestCase):
         self.assertFalse(res["ok"])                                   # the replay exception never applies to live edits
 
 
+class SourceVerification(unittest.TestCase):
+    """D3/D9: warnings wherever verification is overdue or unconfirmed; dates are never invented or changed."""
+    SC = Path(__file__).resolve().parent.parent / "data" / "source_checks.json"
+    HDFC_SMALL = "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct"
+    KYC = "https://www.hdfcfund.com/investor-services/kyc"
+
+    def tearDown(self):
+        os.environ.pop("TODAY_OVERRIDE", None)
+
+    def test_statuses_follow_recorded_dates_scope_and_the_unchanged_60_day_interval(self):
+        import datetime as dt
+        import verification as v
+        self.assertEqual(config.TIME_SENSITIVE_MAX_DAYS, 60)
+        d = dt.date
+        self.assertEqual(v.source_status(self.KYC, d(2026, 11, 26))["status"], "ok")          # checked 22 Oct, 35 days
+        self.assertEqual(v.source_status(self.KYC, d(2026, 12, 10))["status"], "due_soon")    # 49 days
+        self.assertEqual(v.source_status(self.KYC, d(2026, 12, 22))["status"], "overdue")     # 61 days
+        self.assertEqual(v.source_status("https://example.org/never-checked")["status"], "unconfirmed")
+        today = d(2026, 11, 26)
+        self.assertEqual(v.fact_status(self.HDFC_SMALL, ["min_sip"], today)["status"], "ok")      # a checked field
+        self.assertEqual(v.fact_status(self.HDFC_SMALL, ["benchmark"], today)["status"], "unconfirmed")
+        self.assertEqual(v.fact_status(self.HDFC_SMALL, ["min_sip"], d(2027, 2, 1))["status"], "overdue")
+
+    def test_warnings_appear_where_facts_are_shown_and_no_date_is_changed(self):
+        import hashlib
+        import re
+        h0 = hashlib.sha256(self.SC.read_bytes()).hexdigest()
+        os.environ["REVIEWER_PASSWORD"] = "pw-test"
+        import app as A
+        c = A.app.test_client()
+        tok = re.search(r'name="csrf_token" value="([^"]+)"', c.get("/login").get_data(as_text=True)).group(1)
+        c.post("/login", data={"password": "pw-test", "csrf_token": tok})
+        by_q = {A.SVC.meta[t]["q_id"]: t for t in A.SVC.order}
+        bench = c.get(f"/ticket/{by_q['Q-014']}").get_data(as_text=True)            # benchmark: outside the checked fields
+        self.assertIn("Source verification unconfirmed", bench)
+        self.assertNotIn("Source verification", c.get(f"/ticket/{by_q['Q-005']}").get_data(as_text=True).split("Reply draft")[1].split("Internal routing")[0])
+        self.assertIn("need manual verification (5)", c.get("/sources").get_data(as_text=True))
+        self.assertIn("Source verification:</b>", c.get("/queue").get_data(as_text=True))   # global reviewer banner
+        os.environ["TODAY_OVERRIDE"] = "2027-02-01"                                    # every recorded check > 60 days old
+        self.assertIn("need manual verification (20)", c.get("/sources").get_data(as_text=True))
+        demo = A.app.test_client().get("/demo").get_data(as_text=True)                 # public page warns too
+        self.assertIn("verification overdue", demo)
+        self.assertIn("need manual verification (20)", demo)
+        os.environ.pop("REVIEWER_PASSWORD")
+        self.assertEqual(hashlib.sha256(self.SC.read_bytes()).hexdigest(), h0)          # reporting never edits dates
+
+    def test_dp_explainer_cites_the_page_checked_for_the_per_order_claim(self):
+        exp = weekly.build_explainer({"fee": "DP / depository charges on selling"})
+        b2 = exp["bullets"][1]
+        self.assertIn("per sell order", b2["text"])
+        self.assertEqual(b2["source_url"], "https://groww.in/help/stocks/searchable/are-dp-charges-per-stock-or-per-order")
+        self.assertEqual(exp["last_checked"], "26 Nov 2026")                           # no longer the 22 Oct home page
+
+
 class WeeklyApi(unittest.TestCase):
     def setUp(self):
         import app as A

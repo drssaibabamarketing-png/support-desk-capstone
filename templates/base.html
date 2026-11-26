@@ -23,6 +23,7 @@
     {% endif %}
   </nav></div></div>
 {% if not auth_on %}<div class="notice warn"><div class="wrap">Reviewer access is not configured: <code>REVIEWER_PASSWORD</code> is not set, so the live desk is closed and nothing can be approved. Only the public sample demo is available.</div></div>{% elif not reviewer %}<div class="notice"><div class="wrap">Public view: sample data only. The live queue, tickets, approvals and audit log need a <a href="/login">reviewer login</a>.</div></div>{% endif %}
+{% if reviewer and (ver_summary.overdue or ver_summary.unconfirmed or ver_summary.due_soon) %}<div class="notice warn" role="alert"><div class="wrap"><b>⚠ Source verification:</b> {% if ver_summary.overdue %}{{ ver_summary.overdue }} overdue · {% endif %}{% if ver_summary.unconfirmed %}{{ ver_summary.unconfirmed }} unconfirmed · {% endif %}{% if ver_summary.due_soon %}{{ ver_summary.due_soon }} due for re-check soon · {% endif %}<a href="/sources">see the manual verification list</a>. Replies citing these pages carry a warning.</div></div>{% endif %}
 {% block body %}{% endblock %}
 <footer class="foot"><div class="wrap">Facts-only support desk for Groww and HDFC Mutual Fund · public sources only · no personal data stored · nothing is written or sent without a human approving that action · <a href="/evals">evaluation results</a></div></footer>
 </body></html>

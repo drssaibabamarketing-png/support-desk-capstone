@@ -236,6 +236,7 @@ class Corpus:
             "status": "covered", "answer": c.text, "citation_url": c.url,
             "chunk_id": c.id, "scheme_id": c.scheme_id, "source_label": c.source, "score": round(float(sims[best]), 3),
             "intents": intents, "schemes_detected": schemes,
+            "fact_intents": list(c.intents),                 # what the CITED sentence is about (used for source verification)
             "searched": [f"{len(self.chunks)} corpus facts", *self.sources_searched],
         }
 

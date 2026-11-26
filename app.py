@@ -12,6 +12,7 @@ from markupsafe import Markup, escape
 import config
 import corpus
 import mcp_layer as mcp
+import verification
 from service import Service
 
 app = Flask(__name__)
@@ -153,7 +154,10 @@ def md(text):
 @app.context_processor
 def inject():
     pend = sum(1 for a in SVC.actions.values() if a["status"] == "pending")
-    return {"cfg": config, "pending_actions": pend, "llm": config.USE_LLM, "reviewer": is_reviewer(), "auth_on": auth_enabled()}
+    # source verification: shown wherever a fact or source appears (see verification.py); never changes a date
+    return {"cfg": config, "pending_actions": pend, "llm": config.USE_LLM, "reviewer": is_reviewer(), "auth_on": auth_enabled(),
+            "fact_ver": verification.fact_status, "src_ver": verification.source_status,
+            "ver_summary": verification.summary(corpus.ALLOWED_URLS)}
 
 
 def _need(tid):
@@ -173,7 +177,7 @@ def demo():
     """Public, read-only sample view. Reads ONLY the committed snapshot built by make_demo.py from synthetic questions and
     the bundled public-review replay; never the live service, journal, audit log or written files."""
     snap = json.loads(DEMO_SNAPSHOT.read_text(encoding="utf-8")) if DEMO_SNAPSHOT.exists() else None
-    return render_template("demo.html", snap=snap)
+    return render_template("demo.html", snap=snap, manual=verification.manual_list(corpus.ALLOWED_URLS))
 
 
 # ---------------------------------------------------------------- response loop
@@ -362,15 +366,17 @@ def sources():
             cites[u] = cites.get(u, 0) + 1
             fact = next((s["text"] for s in t["draft"]["reply"]["sentences"] if "](" in s["text"]), "")
             claims.append({"q": m["q_id"], "claim": re.sub(r"\s*\(\[source\]\([^)]*\)\)", "", fact), "url": u,
-                           "checked": t["draft"]["reply"]["last_checked"], "canon": bool(t["outputs"]["facts"].get("canonical"))})
+                           "checked": t["draft"]["reply"]["last_checked"], "canon": bool(t["outputs"]["facts"].get("canonical")),
+                           "ver": verification.fact_status(u, t["outputs"]["facts"].get("fact_intents"))})
     run = SVC.latest_run()
     ex = {}
     for rec in SVC.canonical.values():
         for b in rec["bullets"]:
             ex[b["source_url"]] = ex.get(b["source_url"], 0) + 1
-    srcs = [{"url": u, "checked": config.last_checked_for(u), "replies": cites.get(u, 0), "bullets": ex.get(u, 0)}
-            for u in sorted(corpus.ALLOWED_URLS)]
-    return render_template("sources.html", srcs=srcs, claims=claims[:80], run=run, review_end=SVC.window_end)
+    srcs = [{"url": u, "checked": config.last_checked_for(u), "replies": cites.get(u, 0), "bullets": ex.get(u, 0),
+             "ver": verification.source_status(u)} for u in sorted(corpus.ALLOWED_URLS)]
+    return render_template("sources.html", srcs=srcs, claims=claims[:80], run=run, review_end=SVC.window_end,
+                           manual=verification.manual_list(corpus.ALLOWED_URLS))
 
 
 @app.get("/canonical")

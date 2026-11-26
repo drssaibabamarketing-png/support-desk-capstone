@@ -58,6 +58,13 @@ Official URLs in A + C: **36**.
 ## D. Review collection source
 - https://play.google.com/store/apps/details?id=com.nextbillion.groww  (public Play Store reviews exported to `data/reviews.csv`; personal data removed at preparation and again at ingest)
 
+## Verification status and manual checks
+The app computes a status for every source and every cited fact (`verification.py`) and shows a warning wherever one is **overdue** (last check older than the 60-day re-check interval), **unconfirmed** (no check recorded, or the page was checked only for other fields) or **due soon** (within 14 days of the interval): on the ticket, the queue, the weekly and canonical explainers, the Sources page, the public demo, and as a banner for reviewers. The list of URLs that need a person is in [SOURCE_VERIFICATION.md](SOURCE_VERIFICATION.md) (regenerate with `python tools/source_status.py --write`; it exits 1 while any source is overdue or unconfirmed). Dates change only when someone has opened the page; the app never writes them.
+
+**Recorded check scope.** `data/source_checks.json` now records, under `field_scope`, that the five HDFC scheme pages were compared on 26 Nov 2026 only for expense ratio, minimum SIP and exit load (as the note below always said). Their benchmark, riskometer, fund manager, objective and lock-in facts are therefore shown as **unconfirmed** until checked. Note: the customer-facing reply footer for those facts still prints the page's date (`Last checked: 26 Nov 2026`).
+
+**Citation fix.** The DP-charges explainer's source [2], which backs "per sell order, not per stock", is now the Help Centre FAQ that was checked for exactly that claim, instead of the Help Centre home page.
+
 ## Verification notes
 - Checked on **26 Nov 2026**: the five HDFC scheme pages (expense ratio, minimum SIP, exit load; the pages now live under `/product-solutions/overview/`), `groww.in/pricing`, and two Groww Help Centre pages (DP charges per order; charges mentioned in the report).
 - The HDFC pages show **no as-of date** for the expense ratio, so a stored value is current only on its check date.

@@ -22,5 +22,53 @@
     "https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doFaq=yes": "22 Oct 2026",
     "https://groww.in/help/stocks/searchable/are-dp-charges-per-stock-or-per-order": "26 Nov 2026",
     "https://groww.in/help/brokerage-and-taxes/charges-for-delivery/what-are-the-different-charges-mentioned-in-the-report": "26 Nov 2026"
+  },
+  "field_scope": {
+    "_note": "Per-page check scope. When a page was checked only for some fields, list them; facts outside the list are 'unconfirmed'. Edit only after actually opening the page.",
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-elss-tax-saver/direct": {
+      "checked_fields": [
+        "expense_ratio",
+        "min_sip",
+        "exit_load"
+      ],
+      "date": "26 Nov 2026",
+      "note": "Recorded from the 26 Nov 2026 check note above: only these fields were compared on this page. Other facts served from it (benchmark, riskometer, fund manager, objective, lock-in) were not re-confirmed and are shown as UNCONFIRMED until someone checks them and adds the field here."
+    },
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-gold-fund/direct": {
+      "checked_fields": [
+        "expense_ratio",
+        "min_sip",
+        "exit_load"
+      ],
+      "date": "26 Nov 2026",
+      "note": "Recorded from the 26 Nov 2026 check note above: only these fields were compared on this page. Other facts served from it (benchmark, riskometer, fund manager, objective, lock-in) were not re-confirmed and are shown as UNCONFIRMED until someone checks them and adds the field here."
+    },
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-large-cap-fund/direct": {
+      "checked_fields": [
+        "expense_ratio",
+        "min_sip",
+        "exit_load"
+      ],
+      "date": "26 Nov 2026",
+      "note": "Recorded from the 26 Nov 2026 check note above: only these fields were compared on this page. Other facts served from it (benchmark, riskometer, fund manager, objective, lock-in) were not re-confirmed and are shown as UNCONFIRMED until someone checks them and adds the field here."
+    },
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-mid-cap-opportunities-fund/direct": {
+      "checked_fields": [
+        "expense_ratio",
+        "min_sip",
+        "exit_load"
+      ],
+      "date": "26 Nov 2026",
+      "note": "Recorded from the 26 Nov 2026 check note above: only these fields were compared on this page. Other facts served from it (benchmark, riskometer, fund manager, objective, lock-in) were not re-confirmed and are shown as UNCONFIRMED until someone checks them and adds the field here."
+    },
+    "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct": {
+      "checked_fields": [
+        "expense_ratio",
+        "min_sip",
+        "exit_load"
+      ],
+      "date": "26 Nov 2026",
+      "note": "Recorded from the 26 Nov 2026 check note above: only these fields were compared on this page. Other facts served from it (benchmark, riskometer, fund manager, objective, lock-in) were not re-confirmed and are shown as UNCONFIRMED until someone checks them and adds the field here."
+    }
   }
 }

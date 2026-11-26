@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% block title %}{{ m.q_id }}{% endblock %}
+{% extends "base.html" %}{% from "_ver.html" import vbadge, vbanner, vlist with context %}{% block title %}{{ m.q_id }}{% endblock %}
 {% block body %}
 {% set f = t.outputs.facts %}{% set p = t.outputs.pattern %}{% set c = t.outputs.compliance %}{% set tm = t.timing %}
 <main class="wrap page">
@@ -14,6 +14,7 @@
     <p class="sub">{{ t.draft.reply.sentences|length }} sentence(s), facts only. Topic counted for the weekly pulse: <b>{{ m.label }}</b>.</p>
     {% if f.canonical %}<div class="banner" style="background:var(--signalbg);color:var(--signal)">Reused the approved canonical explainer “{{ f.canonical.fee }}” v{{ f.canonical.version }} (bullet {{ f.canonical.bullet_index }}), not drafted fresh. <a href="/canonical">See explainers</a></div>{% endif %}
     {% if t.draft.routing.hold %}<div class="banner warn">Hold: Facts has a clean answer, but this issue is {{ p.trend }} ({{ p.recent_count }} in the last {{ p.window.recent_days }} days). Do not close the ticket; escalate.</div>{% endif %}
+    {{ vbanner(fact_ver(t.draft.reply.citation_url, f.fact_intents)) }}
     {% if t.flagged %}<div class="banner bad">The reviewer flagged this draft after one rework. Approval is switched off.</div>{% endif %}
     <div class="letter" id="reply-text">{{ t.draft.reply.full_text|reply_html }}</div>
     <button type="button" class="ghost" id="speak" hidden>🔊 Read the reply aloud</button>

@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% block title %}Queue{% endblock %}
+{% extends "base.html" %}{% from "_ver.html" import vbadge, vbanner, vlist with context %}{% block title %}Queue{% endblock %}
 {% block body %}<main class="wrap page">
 <h1>Question queue</h1>
 <p class="lede">Each incoming question runs through three agents at once, the orchestrator and the reviewer. You approve, edit or reject every draft. Personal data is removed before anything is stored.</p>
@@ -44,7 +44,7 @@
  <td class="q">{{ t.message }}{% if t.pii_removed %}<br>{% for x in t.pii_removed %}<span class="pill warn">{{ x.type }} removed</span>{% endfor %}{% endif %}</td>
  <td>{{ r.intent }}{% if t.outputs.facts.canonical %}<br><span class="pill ok">canonical v{{ t.outputs.facts.canonical.version }}</span>{% endif %}{% if t.draft.routing.hold %}<br><span class="pill warn">HOLD</span>{% endif %}</td>
  <td class="d">{% set pb = rep.body|plain %}{{ pb[:150] }}{{ '…' if pb|length>150 }}{% if m.edited %} <span class="pill">edited</span>{% endif %}</td>
- <td>{% if rep.citation_url %}<a href="{{ rep.citation_url }}" target="_blank" rel="noopener">link</a><br><span class="mute">{{ rep.last_checked }}</span>{% else %}<span class="pill warn">not covered</span>{% endif %}</td>
+ <td>{% if rep.citation_url %}<a href="{{ rep.citation_url }}" target="_blank" rel="noopener">link</a><br><span class="mute">{{ rep.last_checked }}</span> {{ vbadge(fact_ver(rep.citation_url, t.outputs.facts.fact_intents)) }}{% else %}<span class="pill warn">not covered</span>{% endif %}</td>
  <td>{% if t.flagged %}<span class="pill bad">flagged</span>{% else %}<span class="pill ok">passed</span>{% endif %}</td>
  <td><span class="pill {{ 'ok' if m.status=='approved' else ('bad' if m.status=='rejected' else 'warn') }}">{{ m.status }}</span></td>
 </tr>{% endfor %}

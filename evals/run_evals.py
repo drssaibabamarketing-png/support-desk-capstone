@@ -486,6 +486,22 @@ def regressions():
     d = pd.DataFrame({"text": ["the charges are too much for me really", "brokerage is high on every small order"], "rating": [1, 1], "rid": ["a", "b"], "date": pd.to_datetime(["2026-08-28"] * 2)})
     f = pipeline.detect_fee_issue(d)
     check(S, "a generic 'charges' complaint is not counted as brokerage", f.get("count", 0) == 1 if isinstance(f, dict) and "count" in f else True, str({k: f[k] for k in list(f)[:4]} if isinstance(f, dict) else f))
+    # The check above can never fail (detect_fee_issue returns 'mentions', not 'count'); it is kept unchanged and this
+    # strict version is added next to it (found in the 26 Nov 2026 audit).
+    check(S, "strict: of the two complaints only the explicit brokerage one is counted (mentions == 1, review id b)",
+          f["fee"] == "Brokerage & trade charges" and f["mentions"] == 1 and f["review_ids"] == ["b"], str({k: f[k] for k in ("fee", "mentions", "review_ids")}))
+    # R9 source verification (D3/D9): warnings for unconfirmed and overdue sources; no date is ever changed by the app
+    import verification
+    hdfc_small = "https://www.hdfcfund.com/product-solutions/overview/hdfc-small-cap-fund/direct"
+    from datetime import date as _date
+    check(S, "a fact outside a page's recorded check scope (benchmark) is 'unconfirmed'; a checked field (minimum SIP) is verified",
+          verification.fact_status(hdfc_small, ["benchmark"], _date(2026, 11, 26))["status"] == "unconfirmed"
+          and verification.fact_status(hdfc_small, ["min_sip"], _date(2026, 11, 26))["status"] == "ok", "")
+    sc_before = (ROOT / "data" / "source_checks.json").read_bytes()
+    late = verification.manual_list(ALLOWED_URLS, _date(2027, 2, 1))
+    check(S, "after the 60-day interval every citable source is listed for manual verification as overdue, and no date was changed",
+          len(late) == len(ALLOWED_URLS) and all(r["status"] == "overdue" for r in late) and config.TIME_SENSITIVE_MAX_DAYS == 60
+          and (ROOT / "data" / "source_checks.json").read_bytes() == sc_before, f"{len(late)} of {len(ALLOWED_URLS)}")
 
 
 # ============================================================================== 5. GOLDEN DATASET (labels written by hand in data/golden.csv)

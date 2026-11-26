@@ -269,8 +269,10 @@ FEE_KB = {
             "Groww's pricing page shows the depository's part and Groww's own part of the DP charge separately.",
             "Rates can change; check the current pricing page.",
         ],
+        # [2] backs bullet 2 (per sell order, not per stock): the Help Centre FAQ that was checked for exactly that claim
+        # on 26 Nov 2026, not the Help Centre home page it used to cite.
         "sources": [("Groww pricing and charges", "https://groww.in/pricing"),
-                    ("Groww Help Centre", "https://groww.in/help"),
+                    ("Groww Help Centre: are DP charges per stock or per order?", "https://groww.in/help/stocks/searchable/are-dp-charges-per-stock-or-per-order"),
                     ("SEBI investor resources", "https://investor.sebi.gov.in/")],
     },
     "Auto square-off / closing charges": {

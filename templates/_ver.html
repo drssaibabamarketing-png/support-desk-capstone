@@ -1,0 +1,6 @@
+{# Source-verification warnings (verification.py). Shown wherever a cited fact or an official source appears. #}
+{% macro vbadge(v) %}{% if v and v.status != 'ok' %}<span class="pill {{ 'bad' if v.status == 'overdue' else 'warn' }}" title="{{ v.reason }}">⚠ {{ v.label }}</span>{% endif %}{% endmacro %}
+{% macro vbanner(v, what='The source of this reply') %}{% if v and v.status != 'ok' %}<div class="banner {{ 'bad' if v.status == 'overdue' else 'warn' }}" role="alert"><b>⚠ Source {{ v.label }}.</b> {{ what }}: {{ v.reason }}. A person must open <a href="{{ v.url }}" target="_blank" rel="noopener">the page</a> and confirm the fact before relying on it; only then update <code>data/source_checks.json</code>.</div>{% endif %}{% endmacro %}
+{% macro vlist(manual) %}{% if manual %}<section class="card" style="border-color:var(--amber)"><h2>⚠ Official sources that need manual verification ({{ manual|length }})</h2>
+<p class="sub">Re-check interval: {{ cfg.TIME_SENSITIVE_MAX_DAYS }} days. Dates change only when a person has opened the page; nothing here is updated automatically.</p>
+<table><tr><th>Status</th><th>Source</th><th>Why</th></tr>{% for r in manual %}<tr><td>{{ vbadge(r) }}</td><td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.url }}</a></td><td class="mute">{{ r.reason }}</td></tr>{% endfor %}</table></section>{% endif %}{% endmacro %}
